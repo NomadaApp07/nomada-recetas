@@ -143,7 +143,7 @@ const App = () => {
                   ].map((item, i) => (
                     <div key={i} className="space-y-4">
                       <label className="text-[11px] font-black text-zinc-600 uppercase tracking-tighter">{item.label}</label>
-                      <input type="number" className="w-full bg-black/70 p-6 rounded-3xl text-white font-black text-4xl outline-none border border-white/5 focus:border-blue-600 transition-all mono-font" value={item.val} onChange={e => item.set(e.target.value)} />
+                      <input type="number" className="w-full bg-black/70 p-6 rounded-3xl text-white font-black text-4xl outline-none border border-white/5 focus:border-blue-600 transition-all mono-font" value={item.val} onChange={item.set} />
                     </div>
                   ))}
                </div>
@@ -162,9 +162,6 @@ const App = () => {
                   </div>
                 </div>
                 <button className="no-print w-full bg-black text-white py-10 rounded-[40px] font-black uppercase text-[13px] tracking-[0.6em] mt-20 transition-all shadow-3xl hover:bg-zinc-900 active:scale-95 shadow-black/50">Finalizar Ingeniería</button>
-            </div>
-            <div className="text-center px-12 pt-8 no-print opacity-40">
-                <p className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.7em] leading-relaxed italic">Exponiendo la mediocridad de la consultoría tradicional</p>
             </div>
           </div>
         </div>
