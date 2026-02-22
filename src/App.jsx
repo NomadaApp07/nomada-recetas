@@ -764,12 +764,12 @@ const App = () => {
             </div>
           </section>
 
-          {activeTab === "receta" && (
+          {activeTab === "subrecetas" && (
             <section className="no-print">
               <div className="glass-master rounded-[24px] p-5 border border-white/10">
                 <div className="flex flex-col xl:flex-row xl:items-center gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube</p>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube (base para receta y subrecetas)</p>
                     <select
                       className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
                       value={selectedRecetaId}
@@ -860,8 +860,8 @@ const App = () => {
                 <Target size={14} /> Nombre de la receta
               </span>
               <input 
-                className="w-full bg-transparent text-7xl font-black text-white outline-none tracking-tighter placeholder:text-zinc-900 uppercase italic print:text-4xl"
-                placeholder="ESCRIBE EL NOMBRE DEL IMPERIO..."
+                className="w-full bg-transparent text-3xl md:text-4xl font-black text-white outline-none tracking-tight placeholder:text-zinc-700 uppercase italic print:text-3xl"
+                placeholder="Nombre de la receta"
                 value={nombreReceta}
                 onChange={(e) => setNombreReceta(e.target.value)}
               />
@@ -915,40 +915,40 @@ const App = () => {
             </div>
             <div className="p-8 space-y-8">
               {resumenSubRecetas.map((sub) => (
-                <div key={sub.id} className="border border-white/10 rounded-3xl p-6 bg-white/[0.015]">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
-                    <div className="lg:col-span-5 space-y-2">
-                      <label className="label-yellow text-[9px] block">Nombre de subreceta</label>
+                <div key={sub.id} className="border border-white/10 rounded-3xl p-5 bg-white/[0.015]">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-5 items-end">
+                    <div className="lg:col-span-5">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Nombre de subreceta</label>
                       <input
-                        className="input-tech w-full p-4 rounded-xl font-black uppercase"
+                        className="input-tech w-full h-12 px-4 rounded-xl font-black uppercase"
                         placeholder="Ej: Salsa madre"
                         value={sub.nombre}
                         onChange={(e) => updateSubReceta(sub.id, "nombre", e.target.value)}
                       />
                     </div>
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="label-yellow text-[9px] block">Rendimiento (unidades)</label>
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Rendimiento (unidades)</label>
                       <input
                         type="number"
-                        className="input-tech w-full p-4 rounded-xl text-center font-black mono text-[#06b6d4]"
+                        className="input-tech w-full h-12 px-4 rounded-xl text-center font-black mono text-[#06b6d4]"
                         value={sub.rendimiento}
                         onChange={(e) => updateSubReceta(sub.id, "rendimiento", e.target.value)}
                       />
                     </div>
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="label-yellow text-[9px] block">Costo total</label>
-                      <div className="input-tech w-full p-4 rounded-xl text-right font-black mono text-white">
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Costo total</label>
+                      <div className="input-tech w-full h-12 px-4 rounded-xl text-right font-black mono text-white flex items-center justify-end">
                         ${Math.round(sub.costoTotal).toLocaleString()}
                       </div>
                     </div>
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="label-yellow text-[9px] block">Costo unitario</label>
-                      <div className="input-tech w-full p-4 rounded-xl text-right font-black mono text-[#22c55e]">
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Costo unitario</label>
+                      <div className="input-tech w-full h-12 px-4 rounded-xl text-right font-black mono text-[#22c55e] flex items-center justify-end">
                         ${Math.round(sub.costoUnitario).toLocaleString()}
                       </div>
                     </div>
-                    <div className="lg:col-span-1 flex lg:justify-end lg:items-end">
-                      <button onClick={() => eliminarSubReceta(sub.id)} className="p-3 text-zinc-500 hover:text-[#d946ef] transition-all">
+                    <div className="lg:col-span-1 flex lg:justify-end">
+                      <button onClick={() => eliminarSubReceta(sub.id)} className="h-12 w-12 inline-flex items-center justify-center text-zinc-500 hover:text-[#d946ef] transition-all rounded-xl border border-white/10 bg-white/5">
                         <Trash2 size={18} />
                       </button>
                     </div>
