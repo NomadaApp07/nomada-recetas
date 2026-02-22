@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" fill="none">
+  <g stroke="#f4f4f5" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+    <path d="M210 40L330 160L210 280L90 160L210 40Z"/>
+    <path d="M210 40L330 160"/>
+    <path d="M330 160L210 280"/>
+    <path d="M210 280L90 160"/>
+    <path d="M90 160L210 40"/>
+    <circle cx="210" cy="160" r="58"/>
+    <path d="M120 70L300 250"/>
+    <path d="M300 70L120 250"/>
+  </g>
+  <text x="450" y="225" text-anchor="middle" fill="#f4f4f5" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="8">NOMADA</text>
+  <text x="450" y="300" text-anchor="middle" fill="#d4d4d8" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="36" font-weight="600" letter-spacing="8">CONSULTORIAS GASTRONOMICAS</text>
+</svg>

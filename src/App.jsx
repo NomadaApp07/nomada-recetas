@@ -1,173 +1,937 @@
-import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+﻿import React, { useState, useEffect } from 'react';
+import { 
+  Calculator, Save, Database, Plus, Trash2, 
+  Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
+  AlertTriangle, CheckCircle2, XCircle, TrendingUp, Anchor, Settings, Skull, Activity, Sun, Moon
+} from 'lucide-react';
 
 const App = () => {
-  // NÚCLEO NÓMADA - CONFIGURACIÓN DE CONEXIÓN MAESTRA
-  const [config] = useState({
-    url: import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('nomada_url'),
-    key: import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem('nomada_key')
-  });
+  const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
+  const APP_DOWNLOAD_URL = "https://nomada-app.vercel.app/";
+  const STORAGE_KEY = "nomada_elite_state_v1";
+  const THEME_KEY = "nomada_elite_theme_v1";
+  const LOGIN_LOGO_SOURCES = [
+    "/branding/nomada-logo-white.png",
+    "/branding/nomada-logo-white.svg",
+    "/branding/nomada-logo-negro.png",
+    "/branding/nomada-logo-dark.png",
+    "/branding/nomada-logo.png",
+    "/branding/nomada-logo.svg",
+    "/branding/logo.png",
+    "/nomada-logo.png"
+  ];
+  
+  // --- ESTADO DE AUTENTICACION ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [credentials, setCredentials] = useState({ user: "", pass: "" });
+  const [loginError, setLoginError] = useState(false);
+  const [typewriterText, setTypewriterText] = useState("");
+  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
+  const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
 
-  const [supabase, setSupabase] = useState(null);
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const MASTER_USER = (import.meta.env.VITE_APP_MASTER_USER || "").toUpperCase().trim();
+  const MASTER_PASS = (import.meta.env.VITE_APP_MASTER_PASS || "").trim();
+  const hasConfiguredLogin = MASTER_USER.length > 0 && MASTER_PASS.length > 0;
 
-  // ESTADOS DE INGENIERÍA GASTRONÓMICA - DESARROLLO POR ESTEBAN
-  const [nombreReceta, setNombreReceta] = useState("");
-  const [ingredientes, setIngredientes] = useState([{ nombre: "", unidad: "", cant: "", precio: "" }]);
-  const [porciones, setPorciones] = useState(1);
-  const [margenError, setMargenError] = useState(5); 
-  const [costoObjetivo, setCostoObjetivo] = useState(30); 
-  const [iva, setIva] = useState(19); 
-
-  // PROTOCOLO DE CONEXIÓN MAESTRA
   useEffect(() => {
-    if (config.url && config.key) {
-      const client = createClient(config.url, config.key);
-      setSupabase(client);
-      localStorage.setItem('nomada_url', config.url);
-      localStorage.setItem('nomada_key', config.key);
-      client.auth.getSession().then(({ data: { session } }) => setSession(session));
-      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => setSession(session));
-      return () => subscription.unsubscribe();
+    if (!isAuthenticated) {
+      let i = 0;
+      const timer = setInterval(() => {
+        setTypewriterText(fullPhrase.slice(0, i));
+        i++;
+        if (i > fullPhrase.length) clearInterval(timer);
+      }, 50);
+      return () => clearInterval(timer);
     }
-  }, [config]);
+  }, [isAuthenticated]);
 
-  // ALGORITMOS DE CÁLCULO NÓMADA
-  const calcularFila = (c, p) => Math.round((parseFloat(c) || 0) * (parseFloat(p) || 0));
-  const costoTotalIngredientes = ingredientes.reduce((acc, i) => acc + calcularFila(i.cant, i.precio), 0);
-  const valorMargenError = Math.round(costoTotalIngredientes * (margenError / 100));
-  const costoTotalPreparacion = costoTotalIngredientes + valorMargenError;
-  const costoPorPorcion = Math.round(costoTotalPreparacion / (porciones || 1));
-  const precioPotencialVenta = costoPorPorcion / (costoObjetivo / 100);
-  const valorIva = precioPotencialVenta * (iva / 100);
-  const precioCarta = Math.ceil((precioPotencialVenta + valorIva) / 100) * 100;
-
-  const handleLogin = async (e) => {
+  const handleAuth = (e) => {
     e.preventDefault();
-    setLoading(true);
-    if (!supabase) return alert("SISTEMA NO INICIALIZADO");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) alert("ACCESO DENEGADO - VERIFIQUE CREDENCIALES");
-    setLoading(false);
+    if (!hasConfiguredLogin) {
+      setLoginError(true);
+      return;
+    }
+    const normalizedUser = credentials.user.toUpperCase().trim();
+    const normalizedPass = credentials.pass.trim();
+    if (normalizedUser === MASTER_USER && normalizedPass === MASTER_PASS) {
+      setIsAuthenticated(true);
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+      setCredentials({ ...credentials, pass: "" });
+    }
   };
 
-  if (!session) {
+  // --- LOGICA DE NEGOCIO ---
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const handleScroll = () => setOffset(window.pageYOffset);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const [nombreReceta, setNombreReceta] = useState("");
+  const [costoMaximo, setCostoMaximo] = useState(0);
+  const [activeTab, setActiveTab] = useState("receta");
+  const crearIngrediente = () => ({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    tipo: "insumo",
+    nombre: "",
+    unidad: "GR",
+    cant: "",
+    precio: "",
+    subRecetaId: ""
+  });
+  const [ingredientes, setIngredientes] = useState([
+    { id: 1, tipo: "insumo", nombre: "", unidad: "GR", cant: "", precio: "", subRecetaId: "" }
+  ]);
+  const [subRecetas, setSubRecetas] = useState([
+    {
+      id: 1,
+      nombre: "",
+      rendimiento: "",
+      ingredientes: [{ id: 1, nombre: "", unidad: "GR", cant: "", precio: "" }]
+    }
+  ]);
+  
+  const [params, setParams] = useState({
+    error: 0,
+    rendimiento: 0,
+    target: 0,
+    tax: 0
+  });
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") return "dark";
+    return localStorage.getItem(THEME_KEY) || "dark";
+  });
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        setIsHydrated(true);
+        return;
+      }
+      const saved = JSON.parse(raw);
+      if (typeof saved.nombreReceta === "string") setNombreReceta(saved.nombreReceta);
+      if (saved.costoMaximo !== undefined) setCostoMaximo(saved.costoMaximo);
+      if (Array.isArray(saved.ingredientes) && saved.ingredientes.length > 0) setIngredientes(saved.ingredientes);
+      if (Array.isArray(saved.subRecetas) && saved.subRecetas.length > 0) setSubRecetas(saved.subRecetas);
+      if (saved.params && typeof saved.params === "object") setParams((prev) => ({ ...prev, ...saved.params }));
+      if (saved.activeTab === "receta" || saved.activeTab === "subrecetas" || saved.activeTab === "empresa") setActiveTab(saved.activeTab);
+    } catch (error) {
+      console.error("No se pudo cargar estado guardado", error);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    const payload = { nombreReceta, costoMaximo, ingredientes, subRecetas, params, activeTab };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [isHydrated, nombreReceta, costoMaximo, ingredientes, subRecetas, params, activeTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  // --- MOTOR DE CALCULO MAESTRO ---
+  const resumenSubRecetas = subRecetas.map((sub) => {
+    const costoTotal = sub.ingredientes.reduce((acc, i) => acc + (Number(i.cant) * Number(i.precio)), 0);
+    const costoUnitario = Number(sub.rendimiento) > 0 ? costoTotal / Number(sub.rendimiento) : 0;
+    return { ...sub, costoTotal, costoUnitario };
+  });
+  const subrecetasEnUsoIds = [
+    ...new Set(
+      ingredientes
+        .filter((i) => i.tipo === "subreceta" && i.subRecetaId)
+        .map((i) => String(i.subRecetaId))
+    )
+  ];
+  const subrecetasDisponibles = resumenSubRecetas.length;
+  const subrecetasEnUso = subrecetasEnUsoIds.length;
+  const subrecetasSinAsignar = ingredientes.filter((i) => i.tipo === "subreceta" && !i.subRecetaId).length;
+
+  const subtotalInsumos = ingredientes.reduce((acc, i) => {
+    if (i.tipo === "subreceta") {
+      const sub = resumenSubRecetas.find((s) => String(s.id) === String(i.subRecetaId));
+      return acc + (Number(i.cant) * Number(sub?.costoUnitario || 0));
+    }
+    return acc + (Number(i.cant) * Number(i.precio));
+  }, 0);
+  const totalCostoProd = subtotalInsumos * (1 + (Number(params.error) / 100));
+  const costoPorcion = params.rendimiento > 0 ? totalCostoProd / Number(params.rendimiento) : 0;
+  const divisorTarget = Number(params.target) / 100;
+  const precioSugeridoBase = divisorTarget > 0 ? costoPorcion / divisorTarget : 0;
+  const precioSugerido = precioSugeridoBase * (1 + (Number(params.tax) / 100));
+  const precioFinalRedondeado = Math.ceil(precioSugerido / 100) * 100;
+  const precioSinTax = precioFinalRedondeado / (1 + (Number(params.tax) / 100));
+  const foodCostReal = precioSinTax > 0 ? (costoPorcion / precioSinTax) * 100 : 0;
+  const margenContribucion = precioSinTax - costoPorcion;
+  const desviacion = foodCostReal - Number(params.target);
+
+  const sobrepasoCMP = costoMaximo > 0 && costoPorcion > costoMaximo;
+
+  const getClasificacionNomada = () => {
+    if (costoPorcion <= 0) return { label: "SIN DATA", color: "text-zinc-600", icon: <Zap size={18} /> };
+    
+    const esBajoCosto = costoMaximo > 0 ? costoPorcion <= costoMaximo : foodCostReal <= 30;
+    const esAltoMargen = margenContribucion > (precioSinTax * 0.65);
+
+    if (sobrepasoCMP) return { label: "PASIVO FINANCIERO CRITICO", color: "text-red-500", icon: <Skull size={18} />, desc: "Supera el Costo Maximo Permitido (CMP)." };
+    if (esBajoCosto && esAltoMargen) return { label: "ACTIVO DE ALTA RENTABILIDAD", color: "text-cyan-400", icon: <TrendingUp size={18} />, desc: "El rey del menu." };
+    if (esBajoCosto && !esAltoMargen) return { label: "PRODUCTO DE VOLUMEN / ANCLA", color: "text-emerald-400", icon: <Anchor size={18} />, desc: "Sostiene la operacion." };
+    return { label: "DESAFIO OPERATIVO", color: "text-yellow-500", icon: <Settings size={18} />, desc: "Requiere ingenieria de procesos." };
+  };
+
+  const clasificacion = getClasificacionNomada();
+
+  const getSemaforoStatus = () => {
+    if (params.target <= 0 || foodCostReal <= 0) return { label: "PENDIENTE", color: "text-zinc-500", icon: <Activity size={20} /> };
+    if (sobrepasoCMP) return { label: "TECHO SUPERADO", color: "text-red-600", icon: <XCircle size={20} /> };
+    if (desviacion <= 0) return { label: "ZONA OPTIMA", color: "text-[#22c55e]", icon: <CheckCircle2 size={20} /> };
+    if (desviacion <= 5) return { label: "ZONA DE RIESGO", color: "text-yellow-500", icon: <AlertTriangle size={20} /> };
+    return { label: "ZONA CRITICA", color: "text-red-500", icon: <AlertTriangle size={20} /> };
+  };
+
+  const semaforo = getSemaforoStatus();
+
+  const agregarFila = () => setIngredientes([...ingredientes, crearIngrediente()]);
+  const eliminarFila = (id) => ingredientes.length > 1 && setIngredientes(ingredientes.filter(i => i.id !== id));
+  const updateIng = (id, field, val) => setIngredientes(ingredientes.map(i => i.id === id ? { ...i, [field]: val } : i));
+  const cambiarTipoIngrediente = (id, tipo) => setIngredientes(
+    ingredientes.map((i) => i.id === id
+      ? {
+          ...i,
+          tipo,
+          nombre: tipo === "insumo" ? i.nombre : "",
+          unidad: tipo === "insumo" ? i.unidad : "UN",
+          precio: tipo === "insumo" ? i.precio : "",
+          subRecetaId: tipo === "subreceta" ? i.subRecetaId : ""
+        }
+      : i)
+  );
+
+  const agregarSubReceta = () => setSubRecetas([
+    ...subRecetas,
+    {
+      id: Date.now(),
+      nombre: "",
+      rendimiento: "",
+      ingredientes: [{ id: Date.now() + 1, nombre: "", unidad: "GR", cant: "", precio: "" }]
+    }
+  ]);
+  const eliminarSubReceta = (id) => subRecetas.length > 1 && setSubRecetas(subRecetas.filter((s) => s.id !== id));
+  const updateSubReceta = (id, field, value) => setSubRecetas(subRecetas.map((s) => s.id === id ? { ...s, [field]: value } : s));
+  const agregarIngSubReceta = (subId) => setSubRecetas(
+    subRecetas.map((s) => s.id === subId
+      ? { ...s, ingredientes: [...s.ingredientes, { id: Date.now(), nombre: "", unidad: "GR", cant: "", precio: "" }] }
+      : s)
+  );
+  const eliminarIngSubReceta = (subId, ingId) => setSubRecetas(
+    subRecetas.map((s) => {
+      if (s.id !== subId || s.ingredientes.length <= 1) return s;
+      return { ...s, ingredientes: s.ingredientes.filter((i) => i.id !== ingId) };
+    })
+  );
+  const updateIngSubReceta = (subId, ingId, field, value) => setSubRecetas(
+    subRecetas.map((s) => {
+      if (s.id !== subId) return s;
+      return {
+        ...s,
+        ingredientes: s.ingredientes.map((i) => i.id === ingId ? { ...i, [field]: value } : i)
+      };
+    })
+  );
+
+  const exportarPDF = () => window.print();
+
+  // --- INTERFAZ DE LOGIN ---
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 font-sans text-zinc-300">
-        <div className="w-full max-w-[400px] bg-[#0D0D0D] border border-white/5 p-12 rounded-[40px] shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-blue-600 shadow-[0_0_25px_rgba(37,99,235,0.7)]"></div>
-          <h1 className="text-4xl font-black text-white text-center mb-1 tracking-tighter italic uppercase">NÓMADA</h1>
-          <p className="text-[9px] tracking-[0.4em] text-zinc-500 text-center mb-10 uppercase italic font-bold">Exponiendo la mediocridad de la consultoría tradicional</p>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input className="w-full bg-[#050505] border border-white/5 p-5 rounded-2xl text-white text-sm outline-none focus:border-blue-600 transition-all placeholder:text-zinc-800" type="email" placeholder="USUARIO OPERATIVO" value={email} onChange={e => setEmail(e.target.value)} required />
-            <input className="w-full bg-[#050505] border border-white/5 p-5 rounded-2xl text-white text-sm outline-none focus:border-blue-600 transition-all placeholder:text-zinc-800" type="password" placeholder="CONTRASEÑA" value={password} onChange={e => setPassword(e.target.value)} required />
-            <button disabled={loading} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-blue-500 transition-all">
-              {loading ? "SINCRONIZANDO..." : "EJECUTAR ACCESO"}
-            </button>
-          </form>
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans']">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-amber-300/10 blur-[120px]" />
+          <div className="absolute -bottom-24 -right-20 w-[420px] h-[420px] rounded-full bg-zinc-400/10 blur-[120px]" />
+          <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-2 rounded-[40px] overflow-hidden border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl bg-black/45">
+          <section className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-b from-white/[0.07] to-transparent">
+            <div>
+              <div className="mb-5 flex justify-start">
+                {logoSourceIndex < LOGIN_LOGO_SOURCES.length ? (
+                  <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3">
+                    <img
+                      src={LOGIN_LOGO_SOURCES[logoSourceIndex]}
+                      alt="Logo Nómada"
+                      className="w-44 sm:w-52 h-auto object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
+                      onError={() => setLogoSourceIndex((prev) => prev + 1)}
+                    />
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-3 bg-white/[0.03] border border-white/15 rounded-2xl px-4 py-3">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-zinc-100">
+                      <path d="M4 20L20 4M4 4L20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                    <div className="text-left leading-tight">
+                      <p className="text-[10px] text-zinc-200 font-black uppercase tracking-[0.25em]">Nomada</p>
+                      <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.18em]">Consultorias Gastronomicas</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <h2 className="mt-4 text-5xl leading-[0.95] font-black italic tracking-tight text-white">
+                Nómada<span className="text-amber-300">Elite</span>
+              </h2>
+              <p className="mt-5 text-zinc-400 text-sm leading-relaxed max-w-[34ch]">
+                Centro de mando para ingenieria de costos, pricing y rentabilidad gastronomica.
+              </p>
+            </div>
+            <p className="text-red-400/90 text-[11px] uppercase tracking-[0.2em] font-black italic">
+              "{typewriterText}"
+              <span className="animate-pulse border-r border-red-500 ml-1" />
+            </p>
+          </section>
+
+          <section className="p-8 sm:p-12">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
+              <div className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.22em]">Elite Access</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase mb-2">
+              Ingreso Seguro
+            </h1>
+            <p className="text-zinc-500 text-xs uppercase tracking-[0.25em] mb-8">
+              Sistema de Ingenieria Maestra
+            </p>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="relative group text-left">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type="text"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold uppercase outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Usuario de Acceso"
+                  value={credentials.user}
+                  onChange={(e) => setCredentials({ ...credentials, user: e.target.value.toUpperCase() })}
+                />
+              </div>
+
+              <div className="relative group text-left">
+                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Token de Seguridad"
+                  value={credentials.pass}
+                  onChange={(e) => setCredentials({ ...credentials, pass: e.target.value })}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
+              {loginError && (
+                <p className="text-red-400 text-[10px] font-black uppercase text-center tracking-[0.25em] animate-pulse pt-1">
+                  Acceso Denegado
+                </p>
+              )}
+              {!hasConfiguredLogin && (
+                <p className="text-amber-300/90 text-[10px] font-black uppercase text-center tracking-[0.2em] pt-1">
+                  Configura VITE_APP_MASTER_USER y VITE_APP_MASTER_PASS
+                </p>
+              )}
+
+              <button className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)]">
+                Ingresar
+                <ArrowRight size={16} />
+              </button>
+            </form>
+
+            <div className="lg:hidden mt-8 min-h-[20px]">
+              <p className="text-red-400/90 text-[10px] font-black uppercase tracking-[0.18em] italic">
+                "{typewriterText}"
+                <span className="animate-pulse border-r border-red-500 ml-1" />
+              </p>
+            </div>
+          </section>
         </div>
       </div>
     );
   }
-
+  // --- PANEL PRINCIPAL (VERSION v9.42 BASE) ---
   return (
-    <div className="min-h-screen bg-[#08080A] text-zinc-300 font-sans selection:bg-blue-500/30">
+    <div className={`min-h-screen text-white p-6 lg:p-10 selection:bg-cyan-500/30 relative overflow-hidden ${theme === "light" ? "theme-light bg-[#eef2f7]" : "theme-dark bg-[#050505]"}`}>
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-20 no-print"
+        style={{
+          backgroundImage: theme === "light"
+            ? `url("https://www.transparenttextures.com/patterns/diamond-upholstery.png"), radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%)`
+            : `url("https://www.transparenttextures.com/patterns/carbon-fibre.png"), radial-gradient(circle at 50% 50%, #111 0%, #050505 100%)`,
+          transform: `translateY(${offset * 0.2}px)`,
+          zIndex: 0
+        }}
+      />
+      
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        body { background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.02) 1px, transparent 0); background-size: 40px 40px; background-attachment: fixed; }
-        .nomada-shimmer { background: linear-gradient(180deg, #FFFFFF 0%, #71717A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .glass-card { background: rgba(13, 13, 15, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .blue-panel { background: linear-gradient(145deg, #1D4ED8 0%, #111827 100%); box-shadow: 0 40px 100px -20px rgba(29, 78, 216, 0.4); }
-        .mono-font { font-family: 'JetBrains Mono', monospace; }
-        @media print { .no-print { display: none !important; } .print-area { width: 100% !important; color: black !important; background: white !important; } }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=JetBrains+Mono:wght@700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; }
+        .glass-master { background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.05); }
+        .neon-border-cian { border-left: 4px solid #06b6d4; }
+        .neon-border-magenta { border-left: 4px solid #d946ef; }
+        .neon-border-verde { border-left: 4px solid #22c55e; }
+        .input-tech { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: white; transition: all 0.3s; }
+        .input-tech:focus { background: rgba(6, 182, 212, 0.08); border-color: #06b6d4; outline: none; }
+        .input-tech option { color: #111111; background: #ffffff; }
+        .label-yellow { color: #facc15; font-weight: 800; font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; text-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .pdf-executive-header { display: none; }
+
+        .theme-light { color: #0f172a; }
+        .theme-light .glass-master { background: rgba(255, 255, 255, 0.86); border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08); }
+        .theme-light .input-tech { background: rgba(15, 23, 42, 0.04); border: 1px solid rgba(15, 23, 42, 0.15); color: #0f172a; }
+        .theme-light .input-tech:focus { background: rgba(6, 182, 212, 0.08); border-color: #0891b2; }
+        .theme-light .text-white { color: #0f172a !important; }
+        .theme-light .text-zinc-400, .theme-light .text-zinc-500, .theme-light .text-zinc-600 { color: #475569 !important; }
+        .theme-light .border-white\/5 { border-color: rgba(15, 23, 42, 0.1) !important; }
+        .theme-light .border-white\/10 { border-color: rgba(15, 23, 42, 0.16) !important; }
+        .theme-light .bg-\[\#0a0a0a\] { background: #f8fafc !important; }
+        .theme-light .text-zinc-800 { color: #1e293b !important; }
+        
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; padding: 0 !important; }
+          .glass-master { background: white !important; border: 1px solid #000 !important; color: black !important; backdrop-filter: none !important; box-shadow: none !important; border-radius: 10px !important; margin-bottom: 20px; }
+          .label-yellow { color: #000000 !important; text-shadow: none !important; font-size: 10px !important; font-weight: 900 !important; border-bottom: 1px solid black !important; }
+          input, select { background: transparent !important; color: #000000 !important; border: none !important; font-weight: 900 !important; opacity: 1 !important; }
+          .text-white, .text-[#06b6d4], .text-[#d946ef], .text-[#22c55e], .mono, .text-7xl { color: #000000 !important; text-shadow: none !important; }
+          .neon-border-cian, .neon-border-magenta, .neon-border-verde { border-left: 5px solid black !important; }
+          .pdf-executive-header { display: block !important; border: 2px solid #000; padding: 16px; border-radius: 10px; margin-bottom: 14px; }
+          .pdf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+          .pdf-kpi { border: 1px solid #000; padding: 6px; border-radius: 6px; }
+          .footer-pdf { display: block !important; position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 10px; color: #000 !important; font-weight: 800; border-top: 2px solid black; padding-top: 10px; }
+        }
+        .footer-pdf { display: none; }
       `}</style>
 
-      <nav className="no-print border-b border-white/5 glass-card sticky top-0 z-50">
-        <div className="max-w-[1550px] mx-auto px-10 h-28 flex justify-between items-center">
-          <div className="flex flex-col">
-            <h1 className="text-4xl font-black nomada-shimmer tracking-tighter italic leading-none uppercase">NÓMADA</h1>
-            <p className="text-[10px] tracking-[0.6em] text-blue-500 uppercase font-black mt-2">Mientras ellos adivinan nosotros ejecutamos</p>
-          </div>
-          <div className="flex gap-8 items-center">
-            <button onClick={() => window.print()} className="bg-white/5 border border-white/10 px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all">Generar Reporte Maestro</button>
-            <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-zinc-700 uppercase hover:text-red-500 transition-all">Desconectar</button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-[1550px] mx-auto px-10 py-16 print-area">
-        <div className="grid grid-cols-12 gap-12">
-          <div className="col-span-12 lg:col-span-8 space-y-12">
-            <div className="glass-card p-14 rounded-[55px] border-l-[12px] border-blue-600 shadow-2xl">
-               <span className="text-zinc-500 font-black text-[12px] tracking-[0.6em] uppercase mb-4 block italic">Ingeniería de Producto / Esteban</span>
-               <input className="w-full bg-transparent text-8xl font-black text-white outline-none tracking-tighter placeholder:text-zinc-900 uppercase italic" placeholder="NOMBRE DEL PLATO..." value={nombreReceta} onChange={e => setNombreReceta(e.target.value)} />
+      <div className="relative z-10">
+        <header className="max-w-[1600px] mx-auto mb-12 flex justify-between items-center border-b border-white/10 pb-10 no-print">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <Zap size={24} className="text-[#06b6d4] fill-[#06b6d4]" />
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none">
+                Nómada<span className="text-[#06b6d4]">Elite</span>
+              </h1>
             </div>
+            <p className="text-[10px] font-black tracking-[0.6em] text-zinc-600 uppercase italic">“No optimizamos cocinas… construimos imperios gastronómicos rentables.”</p>
+          </div>
 
-            <div className="glass-card rounded-[55px] overflow-hidden shadow-2xl border border-white/5">
-              <div className="grid grid-cols-12 gap-6 bg-white/[0.04] p-10 text-[11px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">
-                <div className="col-span-4">Insumo / Materia Prima</div>
-                <div className="col-span-2 text-center">Unidad</div>
-                <div className="col-span-2 text-center">Cant.</div>
-                <div className="col-span-2 text-right">Vr. Unitario</div>
-                <div className="col-span-2 text-right">Subtotal</div>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white/10 transition-all"
+            >
+              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+              {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
+            </button>
+            <button onClick={exportarPDF} className="bg-white text-black px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#06b6d4] hover:text-white transition-all shadow-lg">
+              <FileDown size={14} /> Exportar Reporte PDF
+            </button>
+            <button onClick={() => setIsAuthenticated(false)} className="bg-white/5 border border-white/10 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/20 transition-all">
+              <Unlock size={14} /> Bloquear
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-[1600px] mx-auto space-y-12">
+          <div className="pdf-executive-header">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+              <div>
+                <p style={{ fontWeight: 900, letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }}>NOMADA CONSULTORIAS GASTRONOMICAS</p>
+                <p style={{ fontWeight: 800, fontSize: "9px", marginTop: "4px" }}>Reporte Ejecutivo de Ingenieria de Menu</p>
               </div>
-              <div className="p-8 space-y-4">
-                {ingredientes.map((ing, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-6 p-6 rounded-[35px] items-center transition-all bg-white/[0.01] hover:bg-white/[0.05] border border-transparent hover:border-white/5 group">
-                    <div className="col-span-4"><input className="w-full bg-transparent text-white text-2xl font-bold outline-none placeholder:text-zinc-900" placeholder="Componente..." value={ing.nombre} onChange={e => { const n = [...ingredientes]; n[idx].nombre = e.target.value; setIngredientes(n); }} /></div>
-                    <div className="col-span-2 flex justify-center"><input className="w-24 bg-black/50 p-4 rounded-2xl text-zinc-500 text-center text-[11px] font-black outline-none border border-white/5 uppercase" placeholder="UND" value={ing.unidad} onChange={e => { const n = [...ingredientes]; n[idx].unidad = e.target.value; setIngredientes(n); }} /></div>
-                    <div className="col-span-2 flex justify-center"><input type="number" className="w-28 bg-black/70 p-4 rounded-2xl text-white text-center text-2xl font-black outline-none border border-white/5 focus:border-blue-600 mono-font" value={ing.cant} onChange={e => { const n = [...ingredientes]; n[idx].cant = e.target.value; setIngredientes(n); }} /></div>
-                    <div className="col-span-2 text-right px-2"><input type="number" className="bg-transparent text-zinc-600 text-sm font-bold text-right outline-none w-28" placeholder="0" value={ing.precio} onChange={e => { const n = [...ingredientes]; n[idx].precio = e.target.value; setIngredientes(n); }} /></div>
-                    <div className="col-span-2 text-right"><span className="text-white text-4xl font-black italic tracking-tighter mono-font">${calcularFila(ing.cant, ing.precio).toLocaleString()}</span></div>
-                  </div>
-                ))}
-                <button onClick={() => setIngredientes([...ingredientes, { nombre: "", unidad: "", cant: "", precio: "" }])} className="no-print w-full py-10 text-[12px] font-black text-zinc-700 hover:text-white transition-all uppercase tracking-[0.8em] border border-dashed border-white/10 mt-10 rounded-[45px]">
-                  + Sincronizar Nuevo Componente Maestro
-                </button>
+              <div style={{ textAlign: "right", fontSize: "9px", fontWeight: 800 }}>
+                <p>Fecha: {new Date().toLocaleDateString()}</p>
+                <p>Receta: {nombreReceta || "SIN NOMBRE"}</p>
               </div>
             </div>
+            <div className="pdf-kpis">
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Costo x Porcion</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>${Math.round(costoPorcion).toLocaleString()}</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Precio Sugerido</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>${precioFinalRedondeado.toLocaleString()}</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Food Cost Real</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>{foodCostReal.toFixed(1)}%</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Clasificacion</p>
+                <p style={{ fontSize: "12px", fontWeight: 900 }}>{clasificacion.label}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-4 space-y-12">
-            <div className="glass-card p-12 rounded-[55px] space-y-10 shadow-2xl">
-               <h3 className="text-[13px] font-black text-blue-500 uppercase tracking-[0.5em] border-b border-white/5 pb-8 italic">Algoritmo de Control</h3>
-               <div className="grid grid-cols-2 gap-8">
-                  {[
-                    { label: "Margen Error %", val: margenError, set: setMargenError },
-                    { label: "Rendimiento #", val: porciones, set: setPorciones },
-                    { label: "Food Cost Target %", val: costoObjetivo, set: setCostoObjetivo },
-                    { label: "IVA / IMP %", val: iva, set: setIva }
-                  ].map((item, i) => (
-                    <div key={i} className="space-y-4">
-                      <label className="text-[11px] font-black text-zinc-600 uppercase tracking-tighter">{item.label}</label>
-                      <input type="number" className="w-full bg-black/70 p-6 rounded-3xl text-white font-black text-4xl outline-none border border-white/5 focus:border-blue-600 transition-all mono-font" value={item.val} onChange={item.set} />
-                    </div>
-                  ))}
-               </div>
+          <section className="no-print">
+            <div className="glass-master rounded-[24px] p-3 inline-flex gap-3 border border-white/10">
+              <button
+                onClick={() => setActiveTab("receta")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "receta"
+                    ? "bg-[#06b6d4] text-black"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Receta Estandar
+              </button>
+              <button
+                onClick={() => setActiveTab("subrecetas")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "subrecetas"
+                    ? "bg-[#d946ef] text-white"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Banco Subrecetas
+              </button>
+              <button
+                onClick={() => setActiveTab("empresa")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "empresa"
+                    ? "bg-amber-300 text-black"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Empresa
+              </button>
             </div>
-
-            <div className="blue-panel p-16 rounded-[75px] flex flex-col justify-center relative overflow-hidden min-h-[620px] shadow-3xl">
-                <div className="absolute -right-16 -top-16 opacity-10 pointer-events-none select-none no-print"><h1 className="text-[300px] font-black italic tracking-tighter leading-none uppercase">NMD</h1></div>
-                <div className="space-y-20 relative z-10">
-                  <div className="border-b border-white/20 pb-14 text-center lg:text-left">
-                    <span className="text-[16px] font-black uppercase tracking-[0.6em] text-blue-200 italic block mb-6">Costo de Ejecución</span>
-                    <span className="text-7xl font-black italic tracking-tighter text-white mono-font">${costoPorPorcion.toLocaleString()}</span>
+          </section>
+          
+          {/* IDENTIFICADOR, COSTO MÁXIMO Y AUDITORÍA */}
+                    {activeTab === "receta" && (
+            <section className="glass-master border border-white/10 rounded-[24px] p-5 no-print">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Subrecetas Disponibles</p>
+                    <p className="text-xl font-black text-white mono">{subrecetasDisponibles}</p>
                   </div>
-                  <div className="pt-4 text-center lg:text-left">
-                    <p className="text-[16px] font-black uppercase tracking-[0.8em] text-white/60 mb-8 italic">Precio Sugerido Venta</p>
-                    <h2 className="text-[140px] font-black italic tracking-tighter text-white leading-none drop-shadow-3xl mono-font">${precioCarta.toLocaleString()}</h2>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Subrecetas en Uso</p>
+                    <p className="text-xl font-black text-[#22c55e] mono">{subrecetasEnUso}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Filas sin Asignar</p>
+                    <p className={`text-xl font-black mono ${subrecetasSinAsignar > 0 ? "text-yellow-500" : "text-zinc-400"}`}>{subrecetasSinAsignar}</p>
                   </div>
                 </div>
-                <button className="no-print w-full bg-black text-white py-10 rounded-[40px] font-black uppercase text-[13px] tracking-[0.6em] mt-20 transition-all shadow-3xl hover:bg-zinc-900 active:scale-95 shadow-black/50">Finalizar Ingeniería</button>
-            </div>
+                <button
+                  onClick={() => setActiveTab("subrecetas")}
+                  className="bg-[#d946ef]/20 border border-[#d946ef]/40 text-[#f0abfc] px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] hover:bg-[#d946ef]/30 transition-all"
+                >
+                  Ir al Banco
+                </button>
+              </div>
+            </section>
+          )}
+{activeTab === "receta" && (
+            <>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <section className="glass-master neon-border-cian p-10 rounded-[35px] lg:col-span-8 print:p-6 print:lg:col-span-12">
+              <span className="text-[#06b6d4] text-[10px] font-black uppercase tracking-[0.5em] mb-4 block italic flex items-center gap-2 no-print">
+                <Target size={14} /> Nombre de la receta
+              </span>
+              <input 
+                className="w-full bg-transparent text-7xl font-black text-white outline-none tracking-tighter placeholder:text-zinc-900 uppercase italic print:text-4xl"
+                placeholder="ESCRIBE EL NOMBRE DEL IMPERIO..."
+                value={nombreReceta}
+                onChange={(e) => setNombreReceta(e.target.value)}
+              />
+            </section>
+
+            <section className={`glass-master p-8 rounded-[35px] lg:col-span-2 flex flex-col justify-center items-center text-center no-print border-white/5 transition-all ${sobrepasoCMP ? 'border-red-500/50 bg-red-500/5' : ''}`}>
+              <span className="label-yellow text-[9px] mb-2">CMP (Costo Máx)</span>
+              <input 
+                type="number"
+                className={`bg-transparent text-3xl font-black mono text-center outline-none w-full ${sobrepasoCMP ? 'text-red-500' : 'text-white'}`}
+                placeholder="0"
+                value={costoMaximo}
+                onChange={(e) => setCostoMaximo(e.target.value)}
+              />
+              <p className="text-[8px] text-zinc-500 mt-2 uppercase tracking-tighter">Techo Financiero</p>
+            </section>
+
+            <section className={`glass-master lg:col-span-2 p-8 rounded-[35px] flex flex-col justify-center items-center text-center no-print border-white/5`}>
+              <div className={`${semaforo.color} mb-2 animate-pulse`}>
+                {semaforo.icon}
+              </div>
+              <span className={`text-[9px] font-black tracking-[0.2em] uppercase mb-1 ${semaforo.color}`}>Auditoría:</span>
+              <h3 className={`text-xl font-black italic uppercase ${semaforo.color}`}>
+                {semaforo.label}
+              </h3>
+              <p className="text-[8px] font-bold text-zinc-500 mt-1 uppercase">Real: {foodCostReal.toFixed(1)}%</p>
+            </section>
           </div>
+
+          {/* CLASIFICACIÓN DE INGENIERÍA NÓMADA */}
+          <section className={`glass-master border-t-2 ${clasificacion.color.replace('text', 'border')} p-6 rounded-[30px] flex items-center gap-6 no-print`}>
+            <div className={`p-4 rounded-2xl bg-white/5 ${clasificacion.color}`}>
+              {clasificacion.icon}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Clasificación Nómada</p>
+              <h4 className={`text-2xl font-black italic uppercase ${clasificacion.color}`}>{clasificacion.label}</h4>
+              <p className="text-xs text-zinc-400 font-medium italic">"{clasificacion.desc}"</p>
+            </div>
+          </section>
+
+            </>
+          )}
+
+          {/* BANCO DE SUBRECETAS */}
+          {activeTab === "subrecetas" && (
+          <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl no-print">
+            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4">
+              <Database size={18} className="text-[#d946ef]" />
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Banco de Subrecetas</h2>
+            </div>
+            <div className="p-8 space-y-8">
+              {resumenSubRecetas.map((sub) => (
+                <div key={sub.id} className="border border-white/10 rounded-3xl p-6 bg-white/[0.015]">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-6">
+                    <div className="lg:col-span-5 space-y-2">
+                      <label className="label-yellow text-[9px] block">Nombre de subreceta</label>
+                      <input
+                        className="input-tech w-full p-4 rounded-xl font-black uppercase"
+                        placeholder="Ej: Salsa madre"
+                        value={sub.nombre}
+                        onChange={(e) => updateSubReceta(sub.id, "nombre", e.target.value)}
+                      />
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                      <label className="label-yellow text-[9px] block">Rendimiento (unidades)</label>
+                      <input
+                        type="number"
+                        className="input-tech w-full p-4 rounded-xl text-center font-black mono text-[#06b6d4]"
+                        value={sub.rendimiento}
+                        onChange={(e) => updateSubReceta(sub.id, "rendimiento", e.target.value)}
+                      />
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                      <label className="label-yellow text-[9px] block">Costo total</label>
+                      <div className="input-tech w-full p-4 rounded-xl text-right font-black mono text-white">
+                        ${Math.round(sub.costoTotal).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="lg:col-span-2 space-y-2">
+                      <label className="label-yellow text-[9px] block">Costo unitario</label>
+                      <div className="input-tech w-full p-4 rounded-xl text-right font-black mono text-[#22c55e]">
+                        ${Math.round(sub.costoUnitario).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="lg:col-span-1 flex lg:justify-end lg:items-end">
+                      <button onClick={() => eliminarSubReceta(sub.id)} className="p-3 text-zinc-500 hover:text-[#d946ef] transition-all">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-12 gap-3 mb-3 px-1">
+                    <div className="col-span-4 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">Nombre del insumo</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-center">Unidad</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-center">Cantidad</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-right">Precio unitario</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-right">Subtotal</div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {sub.ingredientes.map((ing) => (
+                      <div key={ing.id} className="grid grid-cols-12 gap-3 items-center">
+                        <div className="col-span-4 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Nombre del insumo</label>
+                          <input className="input-tech w-full p-3 rounded-xl text-sm font-bold" placeholder="Insumo..." value={ing.nombre} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "nombre", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Unidad</label>
+                          <select className="input-tech w-full p-3 rounded-xl text-center text-xs font-black uppercase bg-[#0a0a0a]" value={ing.unidad} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "unidad", e.target.value)}>
+                            <option value="GR">GR</option><option value="ML">ML</option><option value="UN">UN</option><option value="KG">KG</option><option value="LT">LT</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Cantidad</label>
+                          <input type="number" className="input-tech w-full p-3 rounded-xl text-center font-black mono text-[#06b6d4]" value={ing.cant} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "cant", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Precio unitario</label>
+                          <input type="number" className="input-tech w-full p-3 rounded-xl text-right font-black mono" value={ing.precio} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "precio", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500 text-right block">Subtotal</label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 text-right text-sm font-black mono text-[#22c55e]">
+                              ${(Number(ing.cant) * Number(ing.precio)).toLocaleString()}
+                            </div>
+                            <button onClick={() => eliminarIngSubReceta(sub.id, ing.id)} className="p-2 text-zinc-700 hover:text-[#d946ef] transition-all">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={() => agregarIngSubReceta(sub.id)} className="w-full mt-5 py-3 border border-dashed border-[#d946ef]/25 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-3">
+                    <Plus size={14} /> Agregar insumo a subreceta
+                  </button>
+                </div>
+              ))}
+
+              <button onClick={agregarSubReceta} className="w-full py-5 border border-dashed border-[#d946ef]/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-4">
+                <Plus size={16} /> Crear subreceta
+              </button>
+            </div>
+          </section>
+          )}
+
+          {/* INFORMACION DE LA EMPRESA */}
+          {activeTab === "empresa" && (
+            <>
+              <section className="glass-master border border-amber-300/30 rounded-[28px] p-8 no-print">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">NOMADA CONSULTORIAS GASTRONOMICAS</p>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white">Quienes Somos</h2>
+                <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-5xl">
+                  Somos un equipo especializado en ingenieria de menu, control de costos y estandarizacion operativa para negocios gastronomicos.
+                  Combinamos estrategia financiera con ejecucion en cocina para convertir datos en decisiones rentables y sostenibles.
+                </p>
+                <p className="mt-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-5xl">
+                  Nuestra metodologia conecta recetas, subrecetas, food cost, precio de venta y margen de contribucion en un sistema unico de gestion.
+                </p>
+              </section>
+
+              <section className="glass-master border border-cyan-400/30 rounded-[28px] p-8 no-print">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                  <div className="max-w-4xl">
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Descarga de la App</p>
+                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
+                    <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
+                      App especializada para crear presupuestos gastronomicos con control de costos, recetas estandarizadas,
+                      calculo de food cost y definicion de precios sugeridos para mejorar la rentabilidad del negocio.
+                    </p>
+                  </div>
+                  <a
+                    href={APP_DOWNLOAD_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center px-7 py-4 rounded-2xl bg-cyan-500 text-black font-black uppercase tracking-[0.2em] text-[11px] hover:bg-cyan-400 transition-all"
+                  >
+                    Descargar App
+                  </a>
+                </div>
+              </section>
+
+              <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 no-print">
+                {[
+                  {
+                    title: "Ingenieria de Menu",
+                    desc: "Analisis de rentabilidad por plato, clasificacion estrategica y rediseno de carta con foco en margen.",
+                    color: "text-cyan-400"
+                  },
+                  {
+                    title: "Estandarizacion de Recetas",
+                    desc: "Construccion de recetas y subrecetas maestras con rendimientos, unidades y costos trazables.",
+                    color: "text-[#22c55e]"
+                  },
+                  {
+                    title: "Control de Food Cost",
+                    desc: "Implementacion de indicadores, alertas y seguimiento semanal para proteger utilidad operacional.",
+                    color: "text-yellow-400"
+                  },
+                  {
+                    title: "Pricing Estrategico",
+                    desc: "Definicion de precios sugeridos con impuestos, target y simulacion de escenarios por categoria.",
+                    color: "text-[#d946ef]"
+                  },
+                  {
+                    title: "Auditoria Operativa",
+                    desc: "Diagnostico de procesos en produccion, compras y merma para reducir desviaciones de costo.",
+                    color: "text-red-400"
+                  },
+                  {
+                    title: "Capacitacion de Equipos",
+                    desc: "Formacion practica para cocina, administracion y lideres en control financiero gastronomico.",
+                    color: "text-amber-300"
+                  }
+                ].map((service) => (
+                  <article key={service.title} className="glass-master rounded-[24px] p-6 border border-white/10">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${service.color}`}>Servicio</p>
+                    <h3 className="mt-3 text-xl font-black uppercase italic text-white">{service.title}</h3>
+                    <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{service.desc}</p>
+                  </article>
+                ))}
+              </section>
+            </>
+          )}
+
+          {activeTab === "receta" && (
+            <>
+          {/* ARQUITECTURA DE INSUMOS */}
+          <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl print:rounded-xl">
+            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4 no-print">
+              <Calculator size={18} className="text-[#06b6d4]" />
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Desglose de Arquitectura</h2>
+            </div>
+            
+            <div className="p-8 print:p-4">
+              <div className="grid grid-cols-12 gap-4 mb-8 px-4 border-b border-white/5 pb-6 print:mb-4 print:pb-2">
+                <div className="col-span-4 label-yellow">Insumo Técnico</div>
+                <div className="col-span-2 label-yellow text-center">Und</div>
+                <div className="col-span-2 label-yellow text-center">Cant</div>
+                <div className="col-span-2 label-yellow text-right">V. Unit</div>
+                <div className="col-span-2 label-yellow text-right">V. Total</div>
+              </div>
+
+              <div className="space-y-4 print:space-y-2">
+                {ingredientes.map((ing) => (
+                  <div key={ing.id} className="grid grid-cols-12 gap-4 items-center group relative">
+                    <div className="col-span-4">
+                      <div className="grid grid-cols-12 gap-2">
+                        <select className="input-tech col-span-4 p-3 rounded-xl text-[10px] font-black uppercase bg-[#0a0a0a] no-print" value={ing.tipo} onChange={(e) => cambiarTipoIngrediente(ing.id, e.target.value)}>
+                          <option value="insumo">Insumo</option>
+                          <option value="subreceta">Subreceta</option>
+                        </select>
+                        {ing.tipo === "insumo" ? (
+                          <input className="input-tech col-span-8 w-full p-4 rounded-xl text-white font-bold text-lg print:p-0 print:text-sm" placeholder="Nombre..." value={ing.nombre} onChange={(e) => updateIng(ing.id, 'nombre', e.target.value)} />
+                        ) : (
+                          <select className="input-tech col-span-8 w-full p-4 rounded-xl text-white font-bold text-sm uppercase bg-[#0a0a0a]" value={ing.subRecetaId} onChange={(e) => updateIng(ing.id, "subRecetaId", e.target.value)}>
+                            <option value="">Seleccionar...</option>
+                            {resumenSubRecetas.map((s) => (
+                              <option key={s.id} value={s.id}>{s.nombre || `Subreceta ${s.id}`}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      {ing.tipo === "insumo" ? (
+                        <select className="input-tech w-full p-4 rounded-xl text-center text-xs font-black uppercase bg-[#0a0a0a] print:p-0" value={ing.unidad} onChange={(e) => updateIng(ing.id, 'unidad', e.target.value)}>
+                          <option value="GR">GR</option><option value="ML">ML</option><option value="UN">UN</option><option value="KG">KG</option><option value="LT">LT</option>
+                        </select>
+                      ) : (
+                        <div className="input-tech w-full p-4 rounded-xl text-center text-xs font-black uppercase">UN</div>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" className="input-tech w-full p-4 rounded-xl text-center font-black text-xl text-[#06b6d4] mono print:p-0 print:text-sm" value={ing.cant} onChange={(e) => updateIng(ing.id, 'cant', e.target.value)} />
+                    </div>
+                    <div className="col-span-2">
+                      {ing.tipo === "insumo" ? (
+                        <input type="number" className="input-tech w-full p-4 rounded-xl text-right font-black text-xl text-white mono print:p-0 print:text-sm" value={ing.precio} onChange={(e) => updateIng(ing.id, 'precio', e.target.value)} />
+                      ) : (
+                        <div className="input-tech w-full p-4 rounded-xl text-right font-black text-xl text-white mono print:p-0 print:text-sm">
+                          ${Math.round(resumenSubRecetas.find((s) => String(s.id) === String(ing.subRecetaId))?.costoUnitario || 0).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="col-span-2 flex items-center gap-3">
+                      <div className="flex-1 text-right font-black text-xl text-[#22c55e] mono bg-[#22c55e]/5 p-4 rounded-xl border border-[#22c55e]/10 print:text-black print:p-0 print:border-none">
+                        ${(
+                          ing.tipo === "subreceta"
+                            ? Number(ing.cant) * Number(resumenSubRecetas.find((s) => String(s.id) === String(ing.subRecetaId))?.costoUnitario || 0)
+                            : Number(ing.cant) * Number(ing.precio)
+                        ).toLocaleString()}
+                      </div>
+                      <button onClick={() => eliminarFila(ing.id)} className="p-2 text-zinc-800 hover:text-[#d946ef] transition-all no-print"><Trash2 size={20} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <button onClick={agregarFila} className="w-full mt-10 py-6 border border-dashed border-[#06b6d4]/20 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-cyan-500/40 hover:text-[#06b6d4] hover:bg-cyan-500/5 transition-all flex items-center justify-center gap-4 no-print">
+                <Plus size={18} /> Inyectar Insumo
+              </button>
+            </div>
+          </section>
+
+          {/* ALGORITMO DE CONTROL */}
+          <section className="glass-master neon-border-verde p-10 rounded-[40px] print:p-6 print:rounded-xl">
+            <h3 className="text-[#22c55e] text-[11px] font-black uppercase tracking-[0.5em] italic flex items-center gap-3 mb-8 border-b border-white/5 pb-6 no-print">
+              <ShieldCheck size={18} /> Algoritmo de Control Maestro
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-10 print:flex print:justify-between print:gap-4">
+              {[
+                { label: "M. Error %", k: "error", c: "text-[#06b6d4]" },
+                { label: "Porciones", k: "rendimiento", c: "text-[#06b6d4]" },
+                { label: "FC Target %", k: "target", c: "text-[#d946ef]" },
+                { label: "Impuesto %", k: "tax", c: "text-[#d946ef]" }
+              ].map((p) => (
+                <div key={p.k} className="space-y-4 print:space-y-0 print:text-center">
+                  <label className="label-yellow print:text-[8px] print:block print:mb-1">{p.label}</label>
+                  <input type="number" className={`input-tech w-full p-6 rounded-2xl font-black text-4xl mono ${p.c} print:p-0 print:text-lg`} value={params[p.k]} onChange={(e) => setParams({...params, [p.k]: e.target.value})} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* RESULTADOS FINALES MAESTROS */}
+          <section className="glass-master neon-border-magenta p-12 rounded-[50px] relative overflow-hidden shadow-2xl flex flex-col md:flex-row justify-between items-center gap-10 print:flex-row print:p-8 print:rounded-xl">
+            <div className="relative z-10 w-full md:w-1/3 print:w-auto">
+              <span className="text-zinc-600 text-[11px] font-black uppercase tracking-[0.6em] italic mb-4 block print:mb-1 print:text-[9px]">Costo x Porción</span>
+              <h2 className={`text-6xl font-black italic tracking-tighter mono print:text-2xl print:text-black ${sobrepasoCMP ? 'text-red-500' : 'text-white'}`}>
+                <span className="text-[#d946ef] print:text-black">$</span>{Math.round(costoPorcion).toLocaleString()}
+              </h2>
+              {sobrepasoCMP && <p className="text-red-500 text-[10px] font-black uppercase mt-2 no-print animate-pulse">Exceso sobre CMP detectado</p>}
+            </div>
+
+            <div className="h-px md:h-24 w-full md:w-px bg-white/10 relative z-10 no-print"></div>
+
+            <div className="relative z-10 w-full md:w-1/2 text-right print:w-auto print:text-left">
+              <span className="text-[#d946ef] text-[11px] font-black uppercase tracking-[0.8em] italic mb-6 block print:mb-1 print:text-[9px] print:text-black">Precio Sugerido Final</span>
+              <div className="flex items-baseline justify-end gap-3 print:justify-start">
+                <span className="text-4xl font-bold text-zinc-800 mono no-print">$</span>
+                <h2 className="text-[100px] font-black text-white italic tracking-tighter leading-none mono print:text-4xl print:text-black">
+                  ${precioFinalRedondeado.toLocaleString()}
+                </h2>
+              </div>
+            </div>
+          </section>
+            </>
+          )}
+
+        </main>
+
+        <footer className="max-w-[1600px] mx-auto mt-20 mb-10 text-center opacity-30 italic tracking-[1em] text-[10px] uppercase no-print">
+          Exponiendo la mediocridad de la consultoría tradicional
+        </footer>
+
+        {/* FOOTER PDF RECONSTRUIDO CON CLARIDAD */}
+        <div className="footer-pdf">
+          <p className="font-black uppercase tracking-widest text-[10px]">NÓMADA CONSULTORÍAS GASTRONÓMICAS</p>
+          <p className="mt-1 opacity-80 text-[8px]">"Mientras ellos adivinan nosotros ejecutamos."</p>
+          <p className="mt-2 text-[7px] uppercase tracking-widest">INGENIERÍA DE MENÚ: {clasificacion.label} — {new Date().toLocaleDateString()}</p>
+          <p className="mt-1 text-[7px] uppercase tracking-widest">FOOD COST REAL: {foodCostReal.toFixed(1)}% | CMP ESTABLECIDO: ${Number(costoMaximo).toLocaleString()}</p>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
 
 export default App;
+
+
+
+

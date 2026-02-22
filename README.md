@@ -1,16 +1,53 @@
-# React + Vite
+# Nómada Elite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación de ingeniería de costos gastronómicos (React + Vite).
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js 20+
+- npm
 
-## React Compiler
+## Variables de entorno
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Copia `.env.example` como `.env`
+2. Completa tus credenciales:
 
-## Expanding the ESLint configuration
+```env
+VITE_APP_MASTER_USER=TU_USUARIO
+VITE_APP_MASTER_PASS=TU_PASSWORD
+VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+VITE_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Desarrollo local
+
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Publicar en Vercel
+
+1. Sube este repo a GitHub.
+2. Entra a Vercel y crea proyecto desde ese repo.
+3. Configura estos env vars en Vercel:
+   - `VITE_APP_MASTER_USER`
+   - `VITE_APP_MASTER_PASS`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy.
+5. Conecta dominio propio si quieres venderla (`app.tudominio.com`).
+
+## Nota de seguridad
+
+El frontend nunca queda 100% oculto. Para vender con seguridad real:
+- mueve login y lógica crítica al backend,
+- usa auth real (Supabase Auth),
+- controla acceso por suscripción (Stripe).
