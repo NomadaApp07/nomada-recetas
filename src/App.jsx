@@ -501,7 +501,7 @@ const App = () => {
               disabled={cloudSaving}
               className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
+              <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar todo"}
             </button>
             <button
               onClick={loadSelectedRecetaCloud}
@@ -1174,7 +1174,6 @@ const App = () => {
                         }}
                       />
                       <p className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-zinc-300">{client.name}</p>
-                      <p className="text-center text-[9px] text-zinc-500 mt-1">{client.file.replace("/branding/clientes/", "")}</p>
                     </div>
                   ))}
                 </div>
@@ -1184,19 +1183,15 @@ const App = () => {
                 <div className="mb-5">
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-300">Reel de Proyectos</p>
                   <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Casos destacados de Nómada</h3>
-                  <p className="mt-2 text-sm text-zinc-400">
-                    Sí, se puede crear como carrete. Este bloque ya quedó listo en formato horizontal desplazable.
-                    Sube tus fotos a <span className="font-black text-zinc-300">public/branding/proyectos</span>.
-                  </p>
                 </div>
 
                 <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
                   {[
-                    { title: "Proyecto 01", file: "/branding/proyectos/proyecto-01.jpg" },
-                    { title: "Proyecto 02", file: "/branding/proyectos/proyecto-02.jpg" },
-                    { title: "Proyecto 03", file: "/branding/proyectos/proyecto-03.jpg" },
-                    { title: "Proyecto 04", file: "/branding/proyectos/proyecto-04.jpg" },
-                    { title: "Proyecto 05", file: "/branding/proyectos/proyecto-05.jpg" }
+                    { title: "Proyecto 01", file: "/branding/proyecto/proyecto-01.jpg" },
+                    { title: "Proyecto 02", file: "/branding/proyecto/proyecto-02.jpg" },
+                    { title: "Proyecto 03", file: "/branding/proyecto/proyecto-03.jpg" },
+                    { title: "Proyecto 04", file: "/branding/proyecto/proyecto-04.jpg.jpeg" },
+                    { title: "Proyecto 05", file: "/branding/proyecto/proyecto-05.jpg.jpeg" }
                   ].map((slide) => (
                     <article key={slide.title} className="snap-start shrink-0 w-[280px] md:w-[340px] rounded-2xl border border-white/10 bg-black/30 p-3">
                       <img
@@ -1209,7 +1204,6 @@ const App = () => {
                         }}
                       />
                       <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">{slide.title}</p>
-                      <p className="text-[9px] text-zinc-500">{slide.file.replace("/branding/proyectos/", "")}</p>
                     </article>
                   ))}
                 </div>
