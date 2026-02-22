@@ -1147,7 +1147,7 @@ const App = () => {
                     { name: "Old Ranch", file: "/branding/clientes/old-ranch.png" },
                     { name: "Mujer Tejer y Saberes", file: "/branding/clientes/mujer-tejer-y-saberes.png" },
                     { name: "Alma Rural", file: "/branding/clientes/alma-rural.png" },
-                    { name: "AF", file: "/branding/clientes/af.png" },
+                    { name: "ALETA", file: "/branding/clientes/af.png" },
                     { name: "Despertar de las Aves", file: "/branding/clientes/despertar-de-las-aves.png" },
                     { name: "El Monte", file: "/branding/clientes/el-monte.png" },
                     { name: "Anamichu Suites", file: "/branding/clientes/anamichu-suites.png" }
