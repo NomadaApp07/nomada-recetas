@@ -1187,20 +1187,46 @@ const App = () => {
 
                 <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
                   {[
-                    { title: "Proyecto 01", file: "/branding/proyecto/proyecto-01.jpg" },
-                    { title: "Proyecto 02", file: "/branding/proyecto/proyecto-02.jpg" },
-                    { title: "Proyecto 03", file: "/branding/proyecto/proyecto-03.jpg" },
-                    { title: "Proyecto 04", file: "/branding/proyecto/proyecto-04.jpg.jpeg" },
-                    { title: "Proyecto 05", file: "/branding/proyecto/proyecto-05.jpg.jpeg" }
+                    {
+                      title: "Proyecto 01",
+                      files: ["/branding/proyecto/proyecto-01.jpg", "/branding/proyecto/proyecto-01.jpeg", "/branding/proyectos/proyecto-01.jpg"]
+                    },
+                    {
+                      title: "Proyecto 02",
+                      files: ["/branding/proyecto/proyecto-02.jpg", "/branding/proyecto/proyecto-02.jpeg", "/branding/proyectos/proyecto-02.jpg"]
+                    },
+                    {
+                      title: "Proyecto 03",
+                      files: ["/branding/proyecto/proyecto-03.jpg", "/branding/proyecto/proyecto-03.jpeg", "/branding/proyectos/proyecto-03.jpg"]
+                    },
+                    {
+                      title: "Proyecto 04",
+                      files: ["/branding/proyecto/proyecto-04.jpg", "/branding/proyecto/proyecto-04.jpg.jpeg", "/branding/proyecto/proyecto-04.jpeg", "/branding/proyectos/proyecto-04.jpg"]
+                    },
+                    {
+                      title: "Proyecto 05",
+                      files: ["/branding/proyecto/proyecto-05.jpg", "/branding/proyecto/proyecto-05.jpg.jpeg", "/branding/proyecto/proyecto-05.jpeg", "/branding/proyectos/proyecto-05.jpg"]
+                    }
                   ].map((slide) => (
                     <article key={slide.title} className="snap-start shrink-0 w-[280px] md:w-[340px] rounded-2xl border border-white/10 bg-black/30 p-3">
                       <img
-                        src={slide.file}
+                        src={slide.files[0]}
                         alt={slide.title}
                         className="w-full h-[180px] object-cover rounded-xl"
+                        data-fallbacks={slide.files.join("|")}
+                        data-fallback-index="0"
                         onError={(e) => {
-                          e.currentTarget.src = "/branding/nomada-logo-white.svg";
-                          e.currentTarget.classList.add("opacity-35", "object-contain", "p-6", "bg-black/40");
+                          const img = e.currentTarget;
+                          const fallbacks = (img.dataset.fallbacks || "").split("|").filter(Boolean);
+                          const currentIndex = Number(img.dataset.fallbackIndex || "0");
+                          const nextIndex = currentIndex + 1;
+                          if (nextIndex < fallbacks.length) {
+                            img.dataset.fallbackIndex = String(nextIndex);
+                            img.src = fallbacks[nextIndex];
+                            return;
+                          }
+                          img.src = "/branding/nomada-logo-white.svg";
+                          img.classList.add("opacity-35", "object-contain", "p-6", "bg-black/40");
                         }}
                       />
                       <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">{slide.title}</p>
