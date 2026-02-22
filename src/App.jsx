@@ -1026,11 +1026,11 @@ const App = () => {
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                   <div className="lg:col-span-8">
                     <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tight text-white leading-[0.95]">
-                      Consultoria que convierte cocinas en negocios rentables
+                      Consultoría que convierte cocinas en negocios rentables
                     </h2>
                     <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-4xl">
-                      Mas de 10 anos elevando operaciones gastronomicas con control de costos, estandares de calidad y ejecucion comercial.
-                      Integramos estrategia, tecnologia y acompanamiento operativo para que cada decision impacte la utilidad.
+                      Más de 10 años elevando operaciones gastronómicas con control de costos, estándares de calidad y ejecución comercial.
+                      Integramos estrategia, tecnología y acompañamiento operativo para que cada decisión impacte la utilidad.
                     </p>
                     <p className="mt-3 text-sm md:text-base text-zinc-400 leading-relaxed max-w-4xl">
                       Equipo con auditores en ISO 22000:2018 y experiencia en restaurantes, hoteles, proyectos rurales y clubes campestres.
@@ -1039,9 +1039,9 @@ const App = () => {
 
                   <div className="lg:col-span-4 grid grid-cols-2 gap-3">
                     {[
-                      { label: "Anos", value: "10+" },
+                      { label: "Años", value: "10+" },
                       { label: "Sectores", value: "7+" },
-                      { label: "Auditoria", value: "ISO 22000" },
+                      { label: "Auditoría", value: "ISO 22000" },
                       { label: "Cobertura", value: "Nacional" }
                     ].map((item) => (
                       <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1056,10 +1056,10 @@ const App = () => {
               <section className="glass-master border border-cyan-400/30 rounded-[28px] p-8 no-print">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                   <div className="max-w-4xl">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestion</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestión</p>
                     <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
                     <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
-                      Plataforma para estandarizar recetas, controlar food cost y definir precios tecnicos de venta con reportes ejecutivos.
+                      Plataforma para estandarizar recetas, controlar food cost y definir precios técnicos de venta con reportes ejecutivos.
                     </p>
                   </div>
                   <a
@@ -1077,12 +1077,12 @@ const App = () => {
                 {[
                   {
                     title: "Coaching Empresarial",
-                    desc: "Acompanamiento estrategico para gerencia, jefes de cocina y equipos de sala con metas medibles.",
+                    desc: "Acompañamiento estratégico para gerencia, jefes de cocina y equipos de sala con metas medibles.",
                     color: "text-cyan-400"
                   },
                   {
-                    title: "Diseno y Estandarizacion de Carta",
-                    desc: "Ingenieria de menu, fichas tecnicas, porcionado y manuales de produccion para consistencia.",
+                    title: "Diseño y Estandarización de Carta",
+                    desc: "Ingeniería de menú, fichas técnicas, porcionado y manuales de producción para consistencia.",
                     color: "text-[#22c55e]"
                   },
                   {
@@ -1091,33 +1091,33 @@ const App = () => {
                     color: "text-yellow-400"
                   },
                   {
-                    title: "Auditorias BPM y Seguridad Alimentaria",
-                    desc: "Evaluacion tecnica de cumplimiento, planes de accion y seguimiento de inocuidad.",
+                    title: "Auditorías BPM y Seguridad Alimentaria",
+                    desc: "Evaluación técnica de cumplimiento, planes de acción y seguimiento de inocuidad.",
                     color: "text-[#d946ef]"
                   },
                   {
-                    title: "Implementacion ISO 22000:2018",
-                    desc: "Diagnostico, documentacion, capacitacion y acompanamiento para certificacion o recertificacion.",
+                    title: "Implementación ISO 22000:2018",
+                    desc: "Diagnóstico, documentación, capacitación y acompañamiento para certificación o recertificación.",
                     color: "text-amber-300"
                   },
                   {
-                    title: "Capacitacion In Company",
-                    desc: "Programas practicos de cocina, servicio y costos para acelerar curva de aprendizaje del personal.",
+                    title: "Capacitación In Company",
+                    desc: "Programas prácticos de cocina, servicio y costos para acelerar curva de aprendizaje del personal.",
                     color: "text-cyan-300"
                   },
                   {
                     title: "Talleres de Cocina Privados",
-                    desc: "Experiencias para equipos o grupos privados con enfoque tecnico y gastronomico.",
+                    desc: "Experiencias para equipos o grupos privados con enfoque técnico y gastronómico.",
                     color: "text-lime-300"
                   },
                   {
-                    title: "Apertura y Reestructuracion",
-                    desc: "Diseno de procesos de arranque, ajuste de organigrama y estabilizacion operativa.",
+                    title: "Apertura y Reestructuración",
+                    desc: "Diseño de procesos de arranque, ajuste de organigrama y estabilización operativa.",
                     color: "text-rose-300"
                   },
                   {
                     title: "Compras y Control de Proveedores",
-                    desc: "Estandares de compra, negociacion y evaluacion de rendimiento de proveedores criticos.",
+                    desc: "Estándares de compra, negociación y evaluación de rendimiento de proveedores críticos.",
                     color: "text-indigo-300"
                   }
                 ].map((service) => (
@@ -1133,32 +1133,73 @@ const App = () => {
                 <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Clientes y Proyectos</p>
-                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Empresas que han confiado en Nomada</h3>
+                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Empresas que han confiado en Nómada</h3>
                   </div>
                   <p className="text-xs text-zinc-500 max-w-lg">
-                    Si algun logo no aparece, sube el archivo en <span className="font-black text-zinc-300">public/branding/clientes</span> con el nombre indicado.
+                    Si algún logo no aparece, sube el archivo en <span className="font-black text-zinc-300">public/branding/clientes</span> con el nombre indicado.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {[
-                    { name: "La Cabana", file: "/branding/clientes/la-cabana.png" },
+                    { name: "La Cabaña", file: "/branding/clientes/la-cabana.png" },
                     { name: "Copoazu", file: "/branding/clientes/copoazu.png" },
                     { name: "Old Ranch", file: "/branding/clientes/old-ranch.png" },
                     { name: "Mujer Tejer y Saberes", file: "/branding/clientes/mujer-tejer-y-saberes.png" },
                     { name: "Alma Rural", file: "/branding/clientes/alma-rural.png" },
                     { name: "AF", file: "/branding/clientes/af.png" },
-                    { name: "Despertar de las Aves", file: "/branding/clientes/despertar-de-las-aves.png" }
+                    { name: "Despertar de las Aves", file: "/branding/clientes/despertar-de-las-aves.png" },
+                    { name: "El Monte", file: "/branding/clientes/el-monte.png" },
+                    { name: "Anamichu Suites", file: "/branding/clientes/anamichu-suites.png" }
                   ].map((client) => (
                     <div key={client.name} className="rounded-2xl border border-white/10 bg-black/25 p-4 flex flex-col items-center justify-center min-h-[150px]">
                       <img
                         src={client.file}
                         alt={client.name}
                         className="max-h-[78px] w-auto object-contain mb-3"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        onError={(e) => {
+                          e.currentTarget.src = "/branding/nomada-logo-white.svg";
+                          e.currentTarget.classList.add("opacity-35");
+                        }}
                       />
                       <p className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-zinc-300">{client.name}</p>
+                      <p className="text-center text-[9px] text-zinc-500 mt-1">{client.file.replace("/branding/clientes/", "")}</p>
                     </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="glass-master rounded-[28px] border border-white/10 p-8 no-print">
+                <div className="mb-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-300">Reel de Proyectos</p>
+                  <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Casos destacados de Nómada</h3>
+                  <p className="mt-2 text-sm text-zinc-400">
+                    Sí, se puede crear como carrete. Este bloque ya quedó listo en formato horizontal desplazable.
+                    Sube tus fotos a <span className="font-black text-zinc-300">public/branding/proyectos</span>.
+                  </p>
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+                  {[
+                    { title: "Proyecto 01", file: "/branding/proyectos/proyecto-01.jpg" },
+                    { title: "Proyecto 02", file: "/branding/proyectos/proyecto-02.jpg" },
+                    { title: "Proyecto 03", file: "/branding/proyectos/proyecto-03.jpg" },
+                    { title: "Proyecto 04", file: "/branding/proyectos/proyecto-04.jpg" },
+                    { title: "Proyecto 05", file: "/branding/proyectos/proyecto-05.jpg" }
+                  ].map((slide) => (
+                    <article key={slide.title} className="snap-start shrink-0 w-[280px] md:w-[340px] rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <img
+                        src={slide.file}
+                        alt={slide.title}
+                        className="w-full h-[180px] object-cover rounded-xl"
+                        onError={(e) => {
+                          e.currentTarget.src = "/branding/nomada-logo-white.svg";
+                          e.currentTarget.classList.add("opacity-35", "object-contain", "p-6", "bg-black/40");
+                        }}
+                      />
+                      <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">{slide.title}</p>
+                      <p className="text-[9px] text-zinc-500">{slide.file.replace("/branding/proyectos/", "")}</p>
+                    </article>
                   ))}
                 </div>
               </section>
