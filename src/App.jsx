@@ -8,7 +8,7 @@ import { supabase } from './supabaseClient';
 
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
-  const APP_DOWNLOAD_URL = "https://nomada-app.vercel.app/";
+  const APP_DOWNLOAD_URL = (import.meta.env.VITE_SIMULADOR_APP_URL || "https://nomada-app.vercel.app/").trim();
   const STORAGE_KEY = "nomada_elite_state_v1";
   const THEME_KEY = "nomada_elite_theme_v1";
   const LOGIN_LOGO_SOURCES = [
@@ -295,6 +295,14 @@ const App = () => {
   const deleteSelectedRecetaCloud = async () => {
     if (!selectedRecetaId) {
       setCloudMessage("Selecciona una receta para eliminar.");
+      return;
+    }
+
+    const selected = recetasCloud.find((row) => String(row.id) === String(selectedRecetaId));
+    const selectedName = selected?.nombre || "esta receta";
+    const confirmed = window.confirm(`Vas a eliminar ${selectedName}. Esta accion no se puede deshacer. Continuar?`);
+    if (!confirmed) {
+      setCloudMessage("Eliminacion cancelada.");
       return;
     }
 
