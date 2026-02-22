@@ -13,11 +13,10 @@ Aplicación de ingeniería de costos gastronómicos (React + Vite).
 2. Completa tus credenciales:
 
 ```env
-VITE_APP_MASTER_USER=TU_USUARIO
-VITE_APP_MASTER_PASS=TU_PASSWORD
 VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 VITE_SUPABASE_ANON_KEY=TU_SUPABASE_ANON_KEY
 ```
+3. Crea usuarios en Supabase Auth (`Authentication > Users`) para iniciar sesiÃ³n con email y contraseÃ±a.
 
 ## Desarrollo local
 
@@ -38,8 +37,6 @@ npm run preview
 1. Sube este repo a GitHub.
 2. Entra a Vercel y crea proyecto desde ese repo.
 3. Configura estos env vars en Vercel:
-   - `VITE_APP_MASTER_USER`
-   - `VITE_APP_MASTER_PASS`
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 4. Deploy.

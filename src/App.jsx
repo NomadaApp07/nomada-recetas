@@ -4,6 +4,7 @@ import {
   Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
   AlertTriangle, CheckCircle2, XCircle, TrendingUp, Anchor, Settings, Skull, Activity, Sun, Moon
 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
@@ -23,44 +24,89 @@ const App = () => {
   
   // --- ESTADO DE AUTENTICACION ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [credentials, setCredentials] = useState({ user: "", pass: "" });
-  const [loginError, setLoginError] = useState(false);
+  const [credentials, setCredentials] = useState({ email: "", pass: "" });
+  const [loginError, setLoginError] = useState("");
   const [typewriterText, setTypewriterText] = useState("");
   const [logoSourceIndex, setLogoSourceIndex] = useState(0);
   const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
 
-  const MASTER_USER = (import.meta.env.VITE_APP_MASTER_USER || "").toUpperCase().trim();
-  const MASTER_PASS = (import.meta.env.VITE_APP_MASTER_PASS || "").trim();
-  const hasConfiguredLogin = MASTER_USER.length > 0 && MASTER_PASS.length > 0;
+  useEffect(() => {
+    let isMounted = true;
+
+    const bootstrapAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("No se pudo recuperar la sesion", error);
+      }
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(data.session));
+      setAuthLoading(false);
+    };
+
+    bootstrapAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(session));
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      let i = 0;
-      const timer = setInterval(() => {
-        setTypewriterText(fullPhrase.slice(0, i));
-        i++;
-        if (i > fullPhrase.length) clearInterval(timer);
-      }, 50);
-      return () => clearInterval(timer);
-    }
-  }, [isAuthenticated]);
+    if (authLoading || isAuthenticated) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      setTypewriterText(fullPhrase.slice(0, i));
+      i++;
+      if (i > fullPhrase.length) clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, [authLoading, isAuthenticated]);
 
-  const handleAuth = (e) => {
+  const handleAuth = async (e) => {
     e.preventDefault();
-    if (!hasConfiguredLogin) {
-      setLoginError(true);
+    if (isSubmittingAuth) return;
+
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
       return;
     }
-    const normalizedUser = credentials.user.toUpperCase().trim();
-    const normalizedPass = credentials.pass.trim();
-    if (normalizedUser === MASTER_USER && normalizedPass === MASTER_PASS) {
-      setIsAuthenticated(true);
-      setLoginError(false);
+
+    setIsSubmittingAuth(true);
+    setLoginError("");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass
+    });
+
+    if (error) {
+      setLoginError("Credenciales invalidas o usuario no confirmado.");
+      setCredentials({ email, pass: "" });
     } else {
-      setLoginError(true);
-      setCredentials({ ...credentials, pass: "" });
+      setIsAuthenticated(true);
+      setCredentials({ email, pass: "" });
     }
+
+    setIsSubmittingAuth(false);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("No se pudo cerrar sesion", error);
+    }
+    setIsAuthenticated(false);
   };
 
   // --- LOGICA DE NEGOCIO ---
@@ -252,6 +298,14 @@ const App = () => {
   const exportarPDF = () => window.print();
 
   // --- INTERFAZ DE LOGIN ---
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6">
+        <p className="text-zinc-400 text-xs uppercase tracking-[0.25em] font-black">Validando sesion...</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans']">
@@ -318,11 +372,11 @@ const App = () => {
               <div className="relative group text-left">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
                 <input
-                  type="text"
-                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold uppercase outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
-                  placeholder="Usuario de Acceso"
-                  value={credentials.user}
-                  onChange={(e) => setCredentials({ ...credentials, user: e.target.value.toUpperCase() })}
+                  type="email"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Correo de Acceso"
+                  value={credentials.email}
+                  onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 />
               </div>
 
@@ -342,17 +396,15 @@ const App = () => {
 
               {loginError && (
                 <p className="text-red-400 text-[10px] font-black uppercase text-center tracking-[0.25em] animate-pulse pt-1">
-                  Acceso Denegado
-                </p>
-              )}
-              {!hasConfiguredLogin && (
-                <p className="text-amber-300/90 text-[10px] font-black uppercase text-center tracking-[0.2em] pt-1">
-                  Configura VITE_APP_MASTER_USER y VITE_APP_MASTER_PASS
+                  {loginError}
                 </p>
               )}
 
-              <button className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)]">
-                Ingresar
+              <button
+                disabled={isSubmittingAuth}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmittingAuth ? "Validando..." : "Ingresar"}
                 <ArrowRight size={16} />
               </button>
             </form>
@@ -446,7 +498,7 @@ const App = () => {
             <button onClick={exportarPDF} className="bg-white text-black px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#06b6d4] hover:text-white transition-all shadow-lg">
               <FileDown size={14} /> Exportar Reporte PDF
             </button>
-            <button onClick={() => setIsAuthenticated(false)} className="bg-white/5 border border-white/10 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/20 transition-all">
+            <button onClick={handleLogout} className="bg-white/5 border border-white/10 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/20 transition-all">
               <Unlock size={14} /> Bloquear
             </button>
           </div>
