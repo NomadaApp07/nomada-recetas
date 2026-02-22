@@ -147,11 +147,186 @@ const App = () => {
     target: 0,
     tax: 0
   });
+  const [recetasCloud, setRecetasCloud] = useState([]);
+  const [selectedRecetaId, setSelectedRecetaId] = useState("");
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudSaving, setCloudSaving] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState("");
+  const [cloudDataColumn, setCloudDataColumn] = useState("payload");
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "dark";
     return localStorage.getItem(THEME_KEY) || "dark";
   });
   const [isHydrated, setIsHydrated] = useState(false);
+
+  const buildRecetaPayload = () => ({
+    nombreReceta,
+    costoMaximo,
+    ingredientes,
+    subRecetas,
+    params,
+    activeTab
+  });
+
+  const hydrateRecetaState = (payload) => {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.nombreReceta === "string") setNombreReceta(payload.nombreReceta);
+    if (payload.costoMaximo !== undefined) setCostoMaximo(payload.costoMaximo);
+    if (Array.isArray(payload.ingredientes) && payload.ingredientes.length > 0) setIngredientes(payload.ingredientes);
+    if (Array.isArray(payload.subRecetas) && payload.subRecetas.length > 0) setSubRecetas(payload.subRecetas);
+    if (payload.params && typeof payload.params === "object") setParams((prev) => ({ ...prev, ...payload.params }));
+    if (payload.activeTab === "receta" || payload.activeTab === "subrecetas" || payload.activeTab === "empresa") setActiveTab(payload.activeTab);
+  };
+
+  const normalizeRecetaRow = (row) => {
+    const candidatePayload = row?.payload ?? row?.data ?? null;
+    const payload = candidatePayload && typeof candidatePayload === "object" ? candidatePayload : null;
+    return {
+      id: row?.id,
+      nombre: row?.nombre || payload?.nombreReceta || "RECETA SIN NOMBRE",
+      payload,
+      updatedAt: row?.updated_at || row?.created_at || null
+    };
+  };
+
+  const getPayloadColumnFromRows = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return cloudDataColumn;
+    const firstWithPayload = rows.find((row) => row && typeof row === "object") || {};
+    if (Object.prototype.hasOwnProperty.call(firstWithPayload, "payload")) return "payload";
+    if (Object.prototype.hasOwnProperty.call(firstWithPayload, "data")) return "data";
+    return cloudDataColumn;
+  };
+
+  const isMissingColumnError = (error, col) => {
+    if (!error?.message) return false;
+    const msg = error.message.toLowerCase();
+    return msg.includes(`column "${col}"`) || msg.includes(`column ${col}`);
+  };
+
+  const loadRecetasCloud = async () => {
+    setCloudLoading(true);
+    setCloudMessage("");
+
+    const { data, error } = await supabase.from("recetas").select("*");
+    if (error) {
+      setCloudLoading(false);
+      setCloudMessage("No se pudo cargar recetas desde Supabase.");
+      console.error("Error al listar recetas", error);
+      return;
+    }
+
+    const detectedColumn = getPayloadColumnFromRows(data);
+    setCloudDataColumn(detectedColumn);
+
+    const normalized = (data || [])
+      .map(normalizeRecetaRow)
+      .filter((row) => row.id)
+      .sort((a, b) => {
+        const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    setRecetasCloud(normalized);
+    setCloudLoading(false);
+  };
+
+  const saveRecetaCloud = async () => {
+    if (cloudSaving) return;
+
+    const nombre = (nombreReceta || "").trim();
+    if (!nombre) {
+      setCloudMessage("Debes asignar un nombre a la receta antes de guardar.");
+      return;
+    }
+
+    setCloudSaving(true);
+    setCloudMessage("");
+
+    const payload = buildRecetaPayload();
+
+    const persistWithColumn = async (columnName) => {
+      const record = { nombre, [columnName]: payload };
+      if (selectedRecetaId) {
+        return supabase.from("recetas").update(record).eq("id", selectedRecetaId).select("id").single();
+      }
+      return supabase.from("recetas").insert(record).select("id").single();
+    };
+
+    let currentColumn = cloudDataColumn;
+    let result = await persistWithColumn(currentColumn);
+    if (result.error && (isMissingColumnError(result.error, currentColumn) || result.error.code === "PGRST204")) {
+      const alternateColumn = currentColumn === "payload" ? "data" : "payload";
+      const retry = await persistWithColumn(alternateColumn);
+      if (!retry.error) {
+        currentColumn = alternateColumn;
+        result = retry;
+      }
+    }
+
+    if (result.error) {
+      setCloudSaving(false);
+      setCloudMessage("Error guardando receta en Supabase.");
+      console.error("Error al guardar receta", result.error);
+      return;
+    }
+
+    setCloudDataColumn(currentColumn);
+    setSelectedRecetaId(result.data?.id ? String(result.data.id) : selectedRecetaId);
+    await loadRecetasCloud();
+    setCloudSaving(false);
+    setCloudMessage("Receta guardada en la nube.");
+  };
+
+  const loadSelectedRecetaCloud = () => {
+    if (!selectedRecetaId) {
+      setCloudMessage("Selecciona una receta para cargar.");
+      return;
+    }
+    const selected = recetasCloud.find((row) => String(row.id) === String(selectedRecetaId));
+    if (!selected || !selected.payload) {
+      setCloudMessage("La receta seleccionada no contiene datos cargables.");
+      return;
+    }
+    hydrateRecetaState(selected.payload);
+    setCloudMessage(`Receta cargada: ${selected.nombre}`);
+  };
+
+  const deleteSelectedRecetaCloud = async () => {
+    if (!selectedRecetaId) {
+      setCloudMessage("Selecciona una receta para eliminar.");
+      return;
+    }
+
+    const { error } = await supabase.from("recetas").delete().eq("id", selectedRecetaId);
+    if (error) {
+      setCloudMessage("No se pudo eliminar la receta.");
+      console.error("Error al eliminar receta", error);
+      return;
+    }
+
+    setSelectedRecetaId("");
+    await loadRecetasCloud();
+    setCloudMessage("Receta eliminada.");
+  };
+
+  const crearNuevaReceta = () => {
+    setSelectedRecetaId("");
+    setNombreReceta("");
+    setCostoMaximo(0);
+    setIngredientes([{ id: Date.now(), tipo: "insumo", nombre: "", unidad: "GR", cant: "", precio: "", subRecetaId: "" }]);
+    setSubRecetas([
+      {
+        id: Date.now() + 1,
+        nombre: "",
+        rendimiento: "",
+        ingredientes: [{ id: Date.now() + 2, nombre: "", unidad: "GR", cant: "", precio: "" }]
+      }
+    ]);
+    setParams({ error: 0, rendimiento: 0, target: 0, tax: 0 });
+    setActiveTab("receta");
+    setCloudMessage("Nueva receta en blanco.");
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -185,6 +360,16 @@ const App = () => {
     if (typeof window === "undefined") return;
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRecetasCloud([]);
+      setSelectedRecetaId("");
+      setCloudMessage("");
+      return;
+    }
+    loadRecetasCloud();
+  }, [isAuthenticated]);
 
   // --- MOTOR DE CALCULO MAESTRO ---
   const resumenSubRecetas = subRecetas.map((sub) => {
@@ -568,6 +753,65 @@ const App = () => {
               >
                 Empresa
               </button>
+            </div>
+          </section>
+
+          <section className="no-print">
+            <div className="glass-master rounded-[24px] p-5 border border-white/10">
+              <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube</p>
+                  <select
+                    className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
+                    value={selectedRecetaId}
+                    onChange={(e) => setSelectedRecetaId(e.target.value)}
+                  >
+                    <option value="">Seleccionar receta...</option>
+                    {recetasCloud.map((receta) => (
+                      <option key={receta.id} value={receta.id}>{receta.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={saveRecetaCloud}
+                    disabled={cloudSaving}
+                    className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
+                  </button>
+                  <button
+                    onClick={loadSelectedRecetaCloud}
+                    className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
+                  >
+                    <Database size={14} /> Cargar
+                  </button>
+                  <button
+                    onClick={deleteSelectedRecetaCloud}
+                    className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
+                  >
+                    <Trash2 size={14} /> Eliminar
+                  </button>
+                  <button
+                    onClick={crearNuevaReceta}
+                    className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
+                  >
+                    <Plus size={14} /> Nueva
+                  </button>
+                  <button
+                    onClick={loadRecetasCloud}
+                    disabled={cloudLoading}
+                    className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
+                  </button>
+                </div>
+              </div>
+
+              {cloudMessage && (
+                <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
+              )}
             </div>
           </section>
           
