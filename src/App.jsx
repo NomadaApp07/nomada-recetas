@@ -501,7 +501,7 @@ const App = () => {
               disabled={cloudSaving}
               className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar todo"}
+              <Save size={14} /> {cloudSaving ? "Guardando receta y subrecetas..." : "Guardar receta y subrecetas"}
             </button>
             <button
               onClick={loadSelectedRecetaCloud}
