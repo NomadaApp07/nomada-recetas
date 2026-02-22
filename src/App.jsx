@@ -488,6 +488,56 @@ const App = () => {
     })
   );
 
+  const renderCloudActions = (title) => (
+    <section className="no-print">
+      <div className="glass-master rounded-[24px] p-5 border border-white/10">
+        <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">
+            {title}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={saveRecetaCloud}
+              disabled={cloudSaving}
+              className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
+            </button>
+            <button
+              onClick={loadSelectedRecetaCloud}
+              className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
+            >
+              <Database size={14} /> Cargar
+            </button>
+            <button
+              onClick={deleteSelectedRecetaCloud}
+              className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
+            >
+              <Trash2 size={14} /> Eliminar
+            </button>
+            <button
+              onClick={crearNuevaReceta}
+              className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
+            >
+              <Plus size={14} /> Nueva
+            </button>
+            <button
+              onClick={loadRecetasCloud}
+              disabled={cloudLoading}
+              className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
+        </div>
+
+        {cloudMessage && (
+          <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
+        )}
+      </div>
+    </section>
+  );
+
   const exportarPDF = () => window.print();
 
   // --- INTERFAZ DE LOGIN ---
@@ -781,46 +831,7 @@ const App = () => {
                       ))}
                     </select>
                   </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={saveRecetaCloud}
-                      disabled={cloudSaving}
-                      className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
-                    </button>
-                    <button
-                      onClick={loadSelectedRecetaCloud}
-                      className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
-                    >
-                      <Database size={14} /> Cargar
-                    </button>
-                    <button
-                      onClick={deleteSelectedRecetaCloud}
-                      className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
-                    >
-                      <Trash2 size={14} /> Eliminar
-                    </button>
-                    <button
-                      onClick={crearNuevaReceta}
-                      className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
-                    >
-                      <Plus size={14} /> Nueva
-                    </button>
-                    <button
-                      onClick={loadRecetasCloud}
-                      disabled={cloudLoading}
-                      className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
-                    </button>
-                  </div>
                 </div>
-
-                {cloudMessage && (
-                  <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
-                )}
               </div>
             </section>
           )}
@@ -908,15 +919,16 @@ const App = () => {
 
           {/* BANCO DE SUBRECETAS */}
           {activeTab === "subrecetas" && (
-          <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl no-print">
-            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4">
-              <Database size={18} className="text-[#d946ef]" />
-              <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Banco de Subrecetas</h2>
-            </div>
-            <div className="p-8 space-y-8">
-              {resumenSubRecetas.map((sub) => (
-                <div key={sub.id} className="border border-white/10 rounded-3xl p-5 bg-white/[0.015]">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-5 items-end">
+            <>
+              <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl no-print">
+                <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4">
+                  <Database size={18} className="text-[#d946ef]" />
+                  <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Banco de Subrecetas</h2>
+                </div>
+                <div className="p-8 space-y-8">
+                  {resumenSubRecetas.map((sub) => (
+                    <div key={sub.id} className="border border-white/10 rounded-3xl p-5 bg-white/[0.015]">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-5 items-end">
                     <div className="lg:col-span-5">
                       <label className="label-yellow text-[9px] block min-h-[26px]">Nombre de subreceta</label>
                       <input
@@ -998,17 +1010,20 @@ const App = () => {
                     ))}
                   </div>
 
-                  <button onClick={() => agregarIngSubReceta(sub.id)} className="w-full mt-5 py-3 border border-dashed border-[#d946ef]/25 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-3">
-                    <Plus size={14} /> Agregar insumo a subreceta
+                      <button onClick={() => agregarIngSubReceta(sub.id)} className="w-full mt-5 py-3 border border-dashed border-[#d946ef]/25 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-3">
+                        <Plus size={14} /> Agregar insumo a subreceta
+                      </button>
+                    </div>
+                  ))}
+
+                  <button onClick={agregarSubReceta} className="w-full py-5 border border-dashed border-[#d946ef]/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-4">
+                    <Plus size={16} /> Crear subreceta
                   </button>
                 </div>
-              ))}
+              </section>
 
-              <button onClick={agregarSubReceta} className="w-full py-5 border border-dashed border-[#d946ef]/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-4">
-                <Plus size={16} /> Crear subreceta
-              </button>
-            </div>
-          </section>
+              {renderCloudActions("Acciones de receta y subrecetas")}
+            </>
           )}
 
           {/* INFORMACION DE LA EMPRESA */}
@@ -1135,15 +1150,11 @@ const App = () => {
                     <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Clientes y Proyectos</p>
                     <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Empresas que han confiado en Nómada</h3>
                   </div>
-                  <p className="text-xs text-zinc-500 max-w-lg">
-                    Si algún logo no aparece, sube el archivo en <span className="font-black text-zinc-300">public/branding/clientes</span> con el nombre indicado.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {[
                     { name: "La Cabaña", file: "/branding/clientes/la-cabana.png" },
-                    { name: "Copoazu", file: "/branding/clientes/copoazu.png" },
                     { name: "Old Ranch", file: "/branding/clientes/old-ranch.png" },
                     { name: "Mujer Tejer y Saberes", file: "/branding/clientes/mujer-tejer-y-saberes.png" },
                     { name: "Alma Rural", file: "/branding/clientes/alma-rural.png" },
@@ -1328,6 +1339,8 @@ const App = () => {
               </div>
             </div>
           </section>
+
+          {renderCloudActions("Acciones de guardado en receta")}
             </>
           )}
 
