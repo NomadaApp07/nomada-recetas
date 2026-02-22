@@ -1014,30 +1014,52 @@ const App = () => {
           {/* INFORMACION DE LA EMPRESA */}
           {activeTab === "empresa" && (
             <>
-              <section className="glass-master border border-amber-300/30 rounded-[28px] p-8 no-print">
-                <div className="flex items-center gap-3 mb-5">
+              <section className="glass-master border border-amber-300/35 rounded-[34px] p-8 md:p-10 no-print overflow-hidden relative">
+                <div className="absolute -top-24 -right-20 w-72 h-72 rounded-full bg-amber-300/15 blur-[90px] pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-cyan-400/10 blur-[100px] pointer-events-none" />
+
+                <div className="relative z-10 flex items-center gap-3 mb-4">
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse" />
                   <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">NOMADA CONSULTORIAS GASTRONOMICAS</p>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white">Quienes Somos</h2>
-                <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-5xl">
-                  Somos un equipo especializado en coaching empresarial, diseno y estandarizacion de carta,
-                  costos y presupuestos para negocios gastronomicos.
-                </p>
-                <p className="mt-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-5xl">
-                  Contamos con mas de 10 anos de experiencia en el mercado, auditores en ISO 22000:2018
-                  y programas de talleres de cocina privados para equipos y lideres operativos.
-                </p>
+
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div className="lg:col-span-8">
+                    <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tight text-white leading-[0.95]">
+                      Consultoria que convierte cocinas en negocios rentables
+                    </h2>
+                    <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-4xl">
+                      Mas de 10 anos elevando operaciones gastronomicas con control de costos, estandares de calidad y ejecucion comercial.
+                      Integramos estrategia, tecnologia y acompanamiento operativo para que cada decision impacte la utilidad.
+                    </p>
+                    <p className="mt-3 text-sm md:text-base text-zinc-400 leading-relaxed max-w-4xl">
+                      Equipo con auditores en ISO 22000:2018 y experiencia en restaurantes, hoteles, proyectos rurales y clubes campestres.
+                    </p>
+                  </div>
+
+                  <div className="lg:col-span-4 grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Anos", value: "10+" },
+                      { label: "Sectores", value: "7+" },
+                      { label: "Auditoria", value: "ISO 22000" },
+                      { label: "Cobertura", value: "Nacional" }
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xl md:text-2xl font-black text-cyan-300">{item.value}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mt-1">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </section>
 
               <section className="glass-master border border-cyan-400/30 rounded-[28px] p-8 no-print">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                   <div className="max-w-4xl">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Descarga de la App</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestion</p>
                     <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
                     <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
-                      App especializada para crear presupuestos gastronomicos con control de costos, recetas estandarizadas,
-                      calculo de food cost y definicion de precios sugeridos para mejorar la rentabilidad del negocio.
+                      Plataforma para estandarizar recetas, controlar food cost y definir precios tecnicos de venta con reportes ejecutivos.
                     </p>
                   </div>
                   <a
@@ -1055,23 +1077,48 @@ const App = () => {
                 {[
                   {
                     title: "Coaching Empresarial",
-                    desc: "Acompanamiento estrategico para lideres, equipos y decisiones clave de crecimiento.",
+                    desc: "Acompanamiento estrategico para gerencia, jefes de cocina y equipos de sala con metas medibles.",
                     color: "text-cyan-400"
                   },
                   {
                     title: "Diseno y Estandarizacion de Carta",
-                    desc: "Estructura de menu, recetas maestras y control operativo para ejecutar con consistencia.",
+                    desc: "Ingenieria de menu, fichas tecnicas, porcionado y manuales de produccion para consistencia.",
                     color: "text-[#22c55e]"
                   },
                   {
                     title: "Costos y Presupuestos",
-                    desc: "Modelos financieros, food cost y presupuestos para proteger margen y rentabilidad.",
+                    desc: "Modelos de costos, proyecciones mensuales, punto de equilibrio y control presupuestal.",
                     color: "text-yellow-400"
                   },
                   {
-                    title: "Auditorias B.P.M y Seguridad Alimentaria",
-                    desc: "Auditorias tecnicas de calidad e inocuidad con enfoque en cumplimiento y mejora continua.",
+                    title: "Auditorias BPM y Seguridad Alimentaria",
+                    desc: "Evaluacion tecnica de cumplimiento, planes de accion y seguimiento de inocuidad.",
                     color: "text-[#d946ef]"
+                  },
+                  {
+                    title: "Implementacion ISO 22000:2018",
+                    desc: "Diagnostico, documentacion, capacitacion y acompanamiento para certificacion o recertificacion.",
+                    color: "text-amber-300"
+                  },
+                  {
+                    title: "Capacitacion In Company",
+                    desc: "Programas practicos de cocina, servicio y costos para acelerar curva de aprendizaje del personal.",
+                    color: "text-cyan-300"
+                  },
+                  {
+                    title: "Talleres de Cocina Privados",
+                    desc: "Experiencias para equipos o grupos privados con enfoque tecnico y gastronomico.",
+                    color: "text-lime-300"
+                  },
+                  {
+                    title: "Apertura y Reestructuracion",
+                    desc: "Diseno de procesos de arranque, ajuste de organigrama y estabilizacion operativa.",
+                    color: "text-rose-300"
+                  },
+                  {
+                    title: "Compras y Control de Proveedores",
+                    desc: "Estandares de compra, negociacion y evaluacion de rendimiento de proveedores criticos.",
+                    color: "text-indigo-300"
                   }
                 ].map((service) => (
                   <article key={service.title} className="glass-master rounded-[24px] p-6 border border-white/10">
@@ -1080,6 +1127,40 @@ const App = () => {
                     <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{service.desc}</p>
                   </article>
                 ))}
+              </section>
+
+              <section className="glass-master rounded-[28px] border border-white/10 p-8 no-print">
+                <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Clientes y Proyectos</p>
+                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Empresas que han confiado en Nomada</h3>
+                  </div>
+                  <p className="text-xs text-zinc-500 max-w-lg">
+                    Si algun logo no aparece, sube el archivo en <span className="font-black text-zinc-300">public/branding/clientes</span> con el nombre indicado.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[
+                    { name: "La Cabana", file: "/branding/clientes/la-cabana.png" },
+                    { name: "Copoazu", file: "/branding/clientes/copoazu.png" },
+                    { name: "Old Ranch", file: "/branding/clientes/old-ranch.png" },
+                    { name: "Mujer Tejer y Saberes", file: "/branding/clientes/mujer-tejer-y-saberes.png" },
+                    { name: "Alma Rural", file: "/branding/clientes/alma-rural.png" },
+                    { name: "AF", file: "/branding/clientes/af.png" },
+                    { name: "Despertar de las Aves", file: "/branding/clientes/despertar-de-las-aves.png" }
+                  ].map((client) => (
+                    <div key={client.name} className="rounded-2xl border border-white/10 bg-black/25 p-4 flex flex-col items-center justify-center min-h-[150px]">
+                      <img
+                        src={client.file}
+                        alt={client.name}
+                        className="max-h-[78px] w-auto object-contain mb-3"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                      <p className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-zinc-300">{client.name}</p>
+                    </div>
+                  ))}
+                </div>
               </section>
             </>
           )}
