@@ -168,6 +168,17 @@ const App = () => {
     activeTab
   });
 
+  const buildPayloadByMode = (mode) => {
+    if (mode === "subrecetas") {
+      return {
+        nombreReceta,
+        subRecetas,
+        activeTab: "subrecetas"
+      };
+    }
+    return buildRecetaPayload();
+  };
+
   const hydrateRecetaState = (payload) => {
     if (!payload || typeof payload !== "object") return;
     if (typeof payload.nombreReceta === "string") setNombreReceta(payload.nombreReceta);
@@ -231,10 +242,13 @@ const App = () => {
     setCloudLoading(false);
   };
 
-  const saveRecetaCloud = async () => {
+  const saveRecetaCloud = async (mode = "receta") => {
     if (cloudSaving) return;
 
-    const nombre = (nombreReceta || "").trim();
+    const isSubrecetasMode = mode === "subrecetas";
+    const nombreBase = (nombreReceta || "").trim();
+    const fallbackName = `BANCO-SUBRECETAS-${new Date().toLocaleDateString("es-CO")}`;
+    const nombre = nombreBase || (isSubrecetasMode ? fallbackName : "");
     if (!nombre) {
       setCloudMessage("Debes asignar un nombre a la receta antes de guardar.");
       return;
@@ -243,7 +257,7 @@ const App = () => {
     setCloudSaving(true);
     setCloudMessage("");
 
-    const payload = buildRecetaPayload();
+    const payload = buildPayloadByMode(mode);
 
     const persistWithColumn = async (columnName) => {
       const record = { nombre, [columnName]: payload };
@@ -275,7 +289,7 @@ const App = () => {
     setSelectedRecetaId(result.data?.id ? String(result.data.id) : selectedRecetaId);
     await loadRecetasCloud();
     setCloudSaving(false);
-    setCloudMessage("Receta guardada en la nube.");
+    setCloudMessage(isSubrecetasMode ? "Banco de subrecetas guardado en la nube." : "Receta completa guardada en la nube.");
   };
 
   const loadSelectedRecetaCloud = () => {
@@ -488,7 +502,7 @@ const App = () => {
     })
   );
 
-  const renderCloudActions = (title) => (
+  const renderCloudActions = (title, mode) => (
     <section className="no-print">
       <div className="glass-master rounded-[24px] p-5 border border-white/10">
         <div className="flex flex-col xl:flex-row xl:items-center gap-4">
@@ -497,11 +511,15 @@ const App = () => {
           </p>
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={saveRecetaCloud}
+              onClick={() => saveRecetaCloud(mode)}
               disabled={cloudSaving}
               className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Save size={14} /> {cloudSaving ? "Guardando receta y subrecetas..." : "Guardar receta y subrecetas"}
+              <Save size={14} /> {
+                cloudSaving
+                  ? (mode === "subrecetas" ? "Guardando subrecetas..." : "Guardando receta completa...")
+                  : (mode === "subrecetas" ? "Guardar subrecetas" : "Guardar receta completa")
+              }
             </button>
             <button
               onClick={loadSelectedRecetaCloud}
@@ -1022,7 +1040,7 @@ const App = () => {
                 </div>
               </section>
 
-              {renderCloudActions("Acciones de receta y subrecetas")}
+              {renderCloudActions("Acciones de receta y subrecetas", "subrecetas")}
             </>
           )}
 
@@ -1360,7 +1378,7 @@ const App = () => {
             </div>
           </section>
 
-          {renderCloudActions("Acciones de guardado en receta")}
+          {renderCloudActions("Acciones de guardado en receta", "receta")}
             </>
           )}
 
