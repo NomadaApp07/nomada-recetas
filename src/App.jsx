@@ -764,64 +764,66 @@ const App = () => {
             </div>
           </section>
 
-          <section className="no-print">
-            <div className="glass-master rounded-[24px] p-5 border border-white/10">
-              <div className="flex flex-col xl:flex-row xl:items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube</p>
-                  <select
-                    className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
-                    value={selectedRecetaId}
-                    onChange={(e) => setSelectedRecetaId(e.target.value)}
-                  >
-                    <option value="">Seleccionar receta...</option>
-                    {recetasCloud.map((receta) => (
-                      <option key={receta.id} value={receta.id}>{receta.nombre}</option>
-                    ))}
-                  </select>
+          {activeTab === "receta" && (
+            <section className="no-print">
+              <div className="glass-master rounded-[24px] p-5 border border-white/10">
+                <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube</p>
+                    <select
+                      className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
+                      value={selectedRecetaId}
+                      onChange={(e) => setSelectedRecetaId(e.target.value)}
+                    >
+                      <option value="">Seleccionar receta...</option>
+                      {recetasCloud.map((receta) => (
+                        <option key={receta.id} value={receta.id}>{receta.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={saveRecetaCloud}
+                      disabled={cloudSaving}
+                      className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
+                    </button>
+                    <button
+                      onClick={loadSelectedRecetaCloud}
+                      className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
+                    >
+                      <Database size={14} /> Cargar
+                    </button>
+                    <button
+                      onClick={deleteSelectedRecetaCloud}
+                      className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
+                    >
+                      <Trash2 size={14} /> Eliminar
+                    </button>
+                    <button
+                      onClick={crearNuevaReceta}
+                      className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
+                    >
+                      <Plus size={14} /> Nueva
+                    </button>
+                    <button
+                      onClick={loadRecetasCloud}
+                      disabled={cloudLoading}
+                      className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={saveRecetaCloud}
-                    disabled={cloudSaving}
-                    className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Save size={14} /> {cloudSaving ? "Guardando..." : "Guardar"}
-                  </button>
-                  <button
-                    onClick={loadSelectedRecetaCloud}
-                    className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
-                  >
-                    <Database size={14} /> Cargar
-                  </button>
-                  <button
-                    onClick={deleteSelectedRecetaCloud}
-                    className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
-                  >
-                    <Trash2 size={14} /> Eliminar
-                  </button>
-                  <button
-                    onClick={crearNuevaReceta}
-                    className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
-                  >
-                    <Plus size={14} /> Nueva
-                  </button>
-                  <button
-                    onClick={loadRecetasCloud}
-                    disabled={cloudLoading}
-                    className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
-                  </button>
-                </div>
+                {cloudMessage && (
+                  <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
+                )}
               </div>
-
-              {cloudMessage && (
-                <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
-              )}
-            </div>
-          </section>
+            </section>
+          )}
           
           {/* IDENTIFICADOR, COSTO MÁXIMO Y AUDITORÍA */}
                     {activeTab === "receta" && (
@@ -1019,11 +1021,12 @@ const App = () => {
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white">Quienes Somos</h2>
                 <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-5xl">
-                  Somos un equipo especializado en ingenieria de menu, control de costos y estandarizacion operativa para negocios gastronomicos.
-                  Combinamos estrategia financiera con ejecucion en cocina para convertir datos en decisiones rentables y sostenibles.
+                  Somos un equipo especializado en coaching empresarial, diseno y estandarizacion de carta,
+                  costos y presupuestos para negocios gastronomicos.
                 </p>
                 <p className="mt-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-5xl">
-                  Nuestra metodologia conecta recetas, subrecetas, food cost, precio de venta y margen de contribucion en un sistema unico de gestion.
+                  Contamos con mas de 10 anos de experiencia en el mercado, auditores en ISO 22000:2018
+                  y programas de talleres de cocina privados para equipos y lideres operativos.
                 </p>
               </section>
 
@@ -1051,34 +1054,24 @@ const App = () => {
               <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 no-print">
                 {[
                   {
-                    title: "Ingenieria de Menu",
-                    desc: "Analisis de rentabilidad por plato, clasificacion estrategica y rediseno de carta con foco en margen.",
+                    title: "Coaching Empresarial",
+                    desc: "Acompanamiento estrategico para lideres, equipos y decisiones clave de crecimiento.",
                     color: "text-cyan-400"
                   },
                   {
-                    title: "Estandarizacion de Recetas",
-                    desc: "Construccion de recetas y subrecetas maestras con rendimientos, unidades y costos trazables.",
+                    title: "Diseno y Estandarizacion de Carta",
+                    desc: "Estructura de menu, recetas maestras y control operativo para ejecutar con consistencia.",
                     color: "text-[#22c55e]"
                   },
                   {
-                    title: "Control de Food Cost",
-                    desc: "Implementacion de indicadores, alertas y seguimiento semanal para proteger utilidad operacional.",
+                    title: "Costos y Presupuestos",
+                    desc: "Modelos financieros, food cost y presupuestos para proteger margen y rentabilidad.",
                     color: "text-yellow-400"
                   },
                   {
-                    title: "Pricing Estrategico",
-                    desc: "Definicion de precios sugeridos con impuestos, target y simulacion de escenarios por categoria.",
+                    title: "Auditorias B.P.M y Seguridad Alimentaria",
+                    desc: "Auditorias tecnicas de calidad e inocuidad con enfoque en cumplimiento y mejora continua.",
                     color: "text-[#d946ef]"
-                  },
-                  {
-                    title: "Auditoria Operativa",
-                    desc: "Diagnostico de procesos en produccion, compras y merma para reducir desviaciones de costo.",
-                    color: "text-red-400"
-                  },
-                  {
-                    title: "Capacitacion de Equipos",
-                    desc: "Formacion practica para cocina, administracion y lideres en control financiero gastronomico.",
-                    color: "text-amber-300"
                   }
                 ].map((service) => (
                   <article key={service.title} className="glass-master rounded-[24px] p-6 border border-white/10">
