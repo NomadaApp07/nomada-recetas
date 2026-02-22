@@ -210,7 +210,7 @@ const App = () => {
     const { data, error } = await supabase.from("recetas").select("*");
     if (error) {
       setCloudLoading(false);
-      setCloudMessage("No se pudo cargar recetas desde Supabase.");
+      setCloudMessage(`No se pudo cargar recetas desde Supabase: ${error.message}`);
       console.error("Error al listar recetas", error);
       return;
     }
