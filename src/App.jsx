@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calculator, Save, Database, Plus, Trash2, 
   Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
@@ -8,7 +8,7 @@ import { supabase } from './supabaseClient';
 
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
-  const APP_DOWNLOAD_URL = (import.meta.env.VITE_SIMULADOR_APP_URL || "https://nomada-app.vercel.app/").trim();
+  const APP_DOWNLOAD_URL = (import.meta.env.VITE_SIMULADOR_APP_URL || "https://simulador-rentabilidad-c0d13rh4t-nomada-consultoriass-projects.vercel.app/").trim();
   const STORAGE_KEY = "nomada_elite_state_v1";
   const THEME_KEY = "nomada_elite_theme_v1";
   const LOGIN_LOGO_SOURCES = [
@@ -147,8 +147,17 @@ const App = () => {
     target: 0,
     tax: 0
   });
+  const [evento, setEvento] = useState({
+    nomina: 0,
+    arriendo: 0,
+    servicios: 0,
+    otros: 0,
+    utilidadObjetivo: 0,
+    cantidadPlatos: 0
+  });
   const [recetasCloud, setRecetasCloud] = useState([]);
   const [selectedRecetaId, setSelectedRecetaId] = useState("");
+  const [selectedSubrecetaId, setSelectedSubrecetaId] = useState("");
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudSaving, setCloudSaving] = useState(false);
   const [cloudMessage, setCloudMessage] = useState("");
@@ -165,6 +174,7 @@ const App = () => {
     ingredientes,
     subRecetas,
     params,
+    evento,
     activeTab
   });
 
@@ -186,6 +196,7 @@ const App = () => {
     if (Array.isArray(payload.ingredientes) && payload.ingredientes.length > 0) setIngredientes(payload.ingredientes);
     if (Array.isArray(payload.subRecetas) && payload.subRecetas.length > 0) setSubRecetas(payload.subRecetas);
     if (payload.params && typeof payload.params === "object") setParams((prev) => ({ ...prev, ...payload.params }));
+    if (payload.evento && typeof payload.evento === "object") setEvento((prev) => ({ ...prev, ...payload.evento }));
     if (payload.activeTab === "receta" || payload.activeTab === "subrecetas" || payload.activeTab === "empresa") setActiveTab(payload.activeTab);
   };
 
@@ -200,12 +211,31 @@ const App = () => {
     };
   };
 
-  const getPayloadColumnFromRows = (rows) => {
+  const getPayloadColumnFromRows = useCallback((rows) => {
     if (!Array.isArray(rows) || rows.length === 0) return cloudDataColumn;
     const firstWithPayload = rows.find((row) => row && typeof row === "object") || {};
     if (Object.prototype.hasOwnProperty.call(firstWithPayload, "payload")) return "payload";
     if (Object.prototype.hasOwnProperty.call(firstWithPayload, "data")) return "data";
     return cloudDataColumn;
+  }, [cloudDataColumn]);
+
+  const getRowMode = (row) => {
+    if (row?.payload?.activeTab === "subrecetas") return "subrecetas";
+    return "receta";
+  };
+
+  const getRowsByMode = (mode) => {
+    if (mode === "subrecetas") return recetasCloud.filter((row) => getRowMode(row) === "subrecetas");
+    return recetasCloud.filter((row) => getRowMode(row) !== "subrecetas");
+  };
+
+  const getSelectedIdByMode = (mode) => (mode === "subrecetas" ? selectedSubrecetaId : selectedRecetaId);
+  const setSelectedIdByMode = (mode, value) => {
+    if (mode === "subrecetas") {
+      setSelectedSubrecetaId(value);
+      return;
+    }
+    setSelectedRecetaId(value);
   };
 
   const isMissingColumnError = (error, col) => {
@@ -214,7 +244,7 @@ const App = () => {
     return msg.includes(`column "${col}"`) || msg.includes(`column ${col}`);
   };
 
-  const loadRecetasCloud = async () => {
+  const loadRecetasCloud = useCallback(async () => {
     setCloudLoading(true);
     setCloudMessage("");
 
@@ -240,12 +270,13 @@ const App = () => {
 
     setRecetasCloud(normalized);
     setCloudLoading(false);
-  };
+  }, [getPayloadColumnFromRows]);
 
   const saveRecetaCloud = async (mode = "receta") => {
     if (cloudSaving) return;
 
     const isSubrecetasMode = mode === "subrecetas";
+    const selectedId = getSelectedIdByMode(mode);
     const nombreBase = (nombreReceta || "").trim();
     const fallbackName = `BANCO-SUBRECETAS-${new Date().toLocaleDateString("es-CO")}`;
     const nombre = nombreBase || (isSubrecetasMode ? fallbackName : "");
@@ -261,8 +292,8 @@ const App = () => {
 
     const persistWithColumn = async (columnName) => {
       const record = { nombre, [columnName]: payload };
-      if (selectedRecetaId) {
-        return supabase.from("recetas").update(record).eq("id", selectedRecetaId).select("id").single();
+      if (selectedId) {
+        return supabase.from("recetas").update(record).eq("id", selectedId).select("id").single();
       }
       return supabase.from("recetas").insert(record).select("id").single();
     };
@@ -286,33 +317,45 @@ const App = () => {
     }
 
     setCloudDataColumn(currentColumn);
-    setSelectedRecetaId(result.data?.id ? String(result.data.id) : selectedRecetaId);
+    setSelectedIdByMode(mode, result.data?.id ? String(result.data.id) : selectedId);
     await loadRecetasCloud();
     setCloudSaving(false);
     setCloudMessage(isSubrecetasMode ? "Banco de subrecetas guardado en la nube." : "Receta completa guardada en la nube.");
   };
 
-  const loadSelectedRecetaCloud = () => {
-    if (!selectedRecetaId) {
+  const loadSelectedRecetaCloud = (mode = "receta") => {
+    const selectedId = getSelectedIdByMode(mode);
+    const rows = getRowsByMode(mode);
+    if (!selectedId) {
       setCloudMessage("Selecciona una receta para cargar.");
       return;
     }
-    const selected = recetasCloud.find((row) => String(row.id) === String(selectedRecetaId));
+    const selected = rows.find((row) => String(row.id) === String(selectedId));
     if (!selected || !selected.payload) {
       setCloudMessage("La receta seleccionada no contiene datos cargables.");
+      return;
+    }
+    if (mode === "subrecetas") {
+      if (Array.isArray(selected.payload.subRecetas) && selected.payload.subRecetas.length > 0) {
+        setSubRecetas(selected.payload.subRecetas);
+      }
+      setActiveTab("subrecetas");
+      setCloudMessage(`Banco de subrecetas cargado: ${selected.nombre}`);
       return;
     }
     hydrateRecetaState(selected.payload);
     setCloudMessage(`Receta cargada: ${selected.nombre}`);
   };
 
-  const deleteSelectedRecetaCloud = async () => {
-    if (!selectedRecetaId) {
+  const deleteSelectedRecetaCloud = async (mode = "receta") => {
+    const selectedId = getSelectedIdByMode(mode);
+    const rows = getRowsByMode(mode);
+    if (!selectedId) {
       setCloudMessage("Selecciona una receta para eliminar.");
       return;
     }
 
-    const selected = recetasCloud.find((row) => String(row.id) === String(selectedRecetaId));
+    const selected = rows.find((row) => String(row.id) === String(selectedId));
     const selectedName = selected?.nombre || "esta receta";
     const confirmed = window.confirm(`Vas a eliminar ${selectedName}. Esta accion no se puede deshacer. Continuar?`);
     if (!confirmed) {
@@ -320,20 +363,21 @@ const App = () => {
       return;
     }
 
-    const { error } = await supabase.from("recetas").delete().eq("id", selectedRecetaId);
+    const { error } = await supabase.from("recetas").delete().eq("id", selectedId);
     if (error) {
       setCloudMessage("No se pudo eliminar la receta.");
       console.error("Error al eliminar receta", error);
       return;
     }
 
-    setSelectedRecetaId("");
+    setSelectedIdByMode(mode, "");
     await loadRecetasCloud();
-    setCloudMessage("Receta eliminada.");
+    setCloudMessage(mode === "subrecetas" ? "Banco de subrecetas eliminado." : "Receta eliminada.");
   };
 
   const crearNuevaReceta = () => {
     setSelectedRecetaId("");
+    setSelectedSubrecetaId("");
     setNombreReceta("");
     setCostoMaximo(0);
     setIngredientes([{ id: Date.now(), tipo: "insumo", nombre: "", unidad: "GR", cant: "", precio: "", subRecetaId: "" }]);
@@ -346,6 +390,7 @@ const App = () => {
       }
     ]);
     setParams({ error: 0, rendimiento: 0, target: 0, tax: 0 });
+    setEvento({ nomina: 0, arriendo: 0, servicios: 0, otros: 0, utilidadObjetivo: 0, cantidadPlatos: 0 });
     setActiveTab("receta");
     setCloudMessage("Nueva receta en blanco.");
   };
@@ -364,6 +409,7 @@ const App = () => {
       if (Array.isArray(saved.ingredientes) && saved.ingredientes.length > 0) setIngredientes(saved.ingredientes);
       if (Array.isArray(saved.subRecetas) && saved.subRecetas.length > 0) setSubRecetas(saved.subRecetas);
       if (saved.params && typeof saved.params === "object") setParams((prev) => ({ ...prev, ...saved.params }));
+      if (saved.evento && typeof saved.evento === "object") setEvento((prev) => ({ ...prev, ...saved.evento }));
       if (saved.activeTab === "receta" || saved.activeTab === "subrecetas" || saved.activeTab === "empresa") setActiveTab(saved.activeTab);
     } catch (error) {
       console.error("No se pudo cargar estado guardado", error);
@@ -374,9 +420,9 @@ const App = () => {
 
   useEffect(() => {
     if (!isHydrated || typeof window === "undefined") return;
-    const payload = { nombreReceta, costoMaximo, ingredientes, subRecetas, params, activeTab };
+    const payload = { nombreReceta, costoMaximo, ingredientes, subRecetas, params, evento, activeTab };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [isHydrated, nombreReceta, costoMaximo, ingredientes, subRecetas, params, activeTab]);
+  }, [isHydrated, nombreReceta, costoMaximo, ingredientes, subRecetas, params, evento, activeTab]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -387,11 +433,12 @@ const App = () => {
     if (!isAuthenticated) {
       setRecetasCloud([]);
       setSelectedRecetaId("");
+      setSelectedSubrecetaId("");
       setCloudMessage("");
       return;
     }
     loadRecetasCloud();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadRecetasCloud]);
 
   // --- MOTOR DE CALCULO MAESTRO ---
   const resumenSubRecetas = subRecetas.map((sub) => {
@@ -427,6 +474,18 @@ const App = () => {
   const foodCostReal = precioSinTax > 0 ? (costoPorcion / precioSinTax) * 100 : 0;
   const margenContribucion = precioSinTax - costoPorcion;
   const desviacion = foodCostReal - Number(params.target);
+  const costosFijosTotales =
+    Number(evento.nomina || 0) +
+    Number(evento.arriendo || 0) +
+    Number(evento.servicios || 0) +
+    Number(evento.otros || 0);
+  const utilidadObjetivo = Number(evento.utilidadObjetivo || 0);
+  const cantidadPlatos = Number(evento.cantidadPlatos || 0);
+  const puntoEquilibrioPlatos = margenContribucion > 0 ? Math.ceil(costosFijosTotales / margenContribucion) : 0;
+  const platosParaUtilidadObjetivo = margenContribucion > 0 ? Math.ceil((costosFijosTotales + utilidadObjetivo) / margenContribucion) : 0;
+  const utilidadProyectada = (margenContribucion * cantidadPlatos) - costosFijosTotales;
+  const ventaProyectada = precioFinalRedondeado * cantidadPlatos;
+  const costoVariableTotal = costoPorcion * cantidadPlatos;
 
   const sobrepasoCMP = costoMaximo > 0 && costoPorcion > costoMaximo;
 
@@ -505,10 +564,24 @@ const App = () => {
   const renderCloudActions = (title, mode) => (
     <section className="no-print">
       <div className="glass-master rounded-[24px] p-5 border border-white/10">
-        <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+        <div className="flex flex-col gap-4">
           <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">
             {title}
           </p>
+          {mode === "receta" && (
+            <div className="max-w-xl">
+              <select
+                className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
+                value={selectedRecetaId}
+                onChange={(e) => setSelectedRecetaId(e.target.value)}
+              >
+                <option value="">Seleccionar receta completa...</option>
+                {getRowsByMode("receta").map((receta) => (
+                  <option key={receta.id} value={receta.id}>{receta.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => saveRecetaCloud(mode)}
@@ -522,13 +595,13 @@ const App = () => {
               }
             </button>
             <button
-              onClick={loadSelectedRecetaCloud}
+              onClick={() => loadSelectedRecetaCloud(mode)}
               className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
             >
               <Database size={14} /> Cargar
             </button>
             <button
-              onClick={deleteSelectedRecetaCloud}
+              onClick={() => deleteSelectedRecetaCloud(mode)}
               className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
             >
               <Trash2 size={14} /> Eliminar
@@ -715,9 +788,9 @@ const App = () => {
         .theme-light .input-tech:focus { background: rgba(6, 182, 212, 0.08); border-color: #0891b2; }
         .theme-light .text-white { color: #0f172a !important; }
         .theme-light .text-zinc-400, .theme-light .text-zinc-500, .theme-light .text-zinc-600 { color: #475569 !important; }
-        .theme-light .border-white\/5 { border-color: rgba(15, 23, 42, 0.1) !important; }
-        .theme-light .border-white\/10 { border-color: rgba(15, 23, 42, 0.16) !important; }
-        .theme-light .bg-\[\#0a0a0a\] { background: #f8fafc !important; }
+        .theme-light .border-white/5 { border-color: rgba(15, 23, 42, 0.1) !important; }
+        .theme-light .border-white/10 { border-color: rgba(15, 23, 42, 0.16) !important; }
+        .theme-light .bg-[#0a0a0a] { background: #f8fafc !important; }
         .theme-light .text-zinc-800 { color: #1e293b !important; }
         
         @media print {
@@ -837,14 +910,14 @@ const App = () => {
               <div className="glass-master rounded-[24px] p-5 border border-white/10">
                 <div className="flex flex-col xl:flex-row xl:items-center gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Recetas en la nube (base para receta y subrecetas)</p>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Banco de subrecetas en la nube</p>
                     <select
                       className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
-                      value={selectedRecetaId}
-                      onChange={(e) => setSelectedRecetaId(e.target.value)}
+                      value={selectedSubrecetaId}
+                      onChange={(e) => setSelectedSubrecetaId(e.target.value)}
                     >
-                      <option value="">Seleccionar receta...</option>
-                      {recetasCloud.map((receta) => (
+                      <option value="">Seleccionar banco...</option>
+                      {getRowsByMode("subrecetas").map((receta) => (
                         <option key={receta.id} value={receta.id}>{receta.nombre}</option>
                       ))}
                     </select>
@@ -1352,6 +1425,76 @@ const App = () => {
                   <input type="number" className={`input-tech w-full p-6 rounded-2xl font-black text-4xl mono ${p.c} print:p-0 print:text-lg`} value={params[p.k]} onChange={(e) => setParams({...params, [p.k]: e.target.value})} />
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="glass-master border border-cyan-400/20 p-10 rounded-[40px] no-print">
+            <h3 className="text-cyan-300 text-[11px] font-black uppercase tracking-[0.4em] italic flex items-center gap-3 mb-8 border-b border-white/5 pb-6">
+              <TrendingUp size={18} /> Rentabilidad de Evento
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5">
+              {[
+                { k: "nomina", label: "Nomina ($)" },
+                { k: "arriendo", label: "Arriendo ($)" },
+                { k: "servicios", label: "Servicios ($)" },
+                { k: "otros", label: "Otros fijos ($)" },
+                { k: "utilidadObjetivo", label: "Utilidad objetivo ($)" },
+                { k: "cantidadPlatos", label: "Cantidad platos" }
+              ].map((item) => (
+                <div key={item.k} className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">{item.label}</label>
+                  <input
+                    type="number"
+                    className="input-tech w-full p-4 rounded-xl font-black mono text-lg text-white"
+                    value={evento[item.k]}
+                    onChange={(e) => setEvento({ ...evento, [item.k]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {margenContribucion <= 0 ? (
+              <div className="mt-6 rounded-2xl border border-red-500/35 bg-red-500/10 p-4">
+                <p className="text-red-300 text-[11px] font-black uppercase tracking-[0.2em]">Margen unitario no viable</p>
+                <p className="text-sm text-zinc-300 mt-2">
+                  El precio sin impuesto no cubre el costo por plato. Ajusta costo, target o precio antes de proyectar utilidad.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Punto de equilibrio</p>
+                  <p className="text-3xl font-black mono text-cyan-300 mt-2">{puntoEquilibrioPlatos.toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">platos minimos</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Platos para utilidad objetivo</p>
+                  <p className="text-3xl font-black mono text-amber-300 mt-2">{platosParaUtilidadObjetivo.toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">con utilidad definida</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Utilidad proyectada</p>
+                  <p className={`text-3xl font-black mono mt-2 ${utilidadProyectada >= 0 ? "text-[#22c55e]" : "text-red-400"}`}>
+                    ${Math.round(utilidadProyectada).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">segun cantidad de platos</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Cotizacion proyectada</p>
+                  <p className="text-3xl font-black mono text-white mt-2">${Math.round(ventaProyectada).toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">ventas brutas del evento</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-zinc-500">
+              <span className="font-black">Costo variable total:</span> ${Math.round(costoVariableTotal).toLocaleString()} |{" "}
+              <span className="font-black">Costos fijos:</span> ${Math.round(costosFijosTotales).toLocaleString()} |{" "}
+              <span className="font-black">Margen por plato:</span> ${Math.round(margenContribucion).toLocaleString()}
             </div>
           </section>
 
