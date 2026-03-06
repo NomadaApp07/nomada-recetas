@@ -1160,22 +1160,12 @@ const App = () => {
               </section>
 
               <section className="glass-master border border-cyan-400/30 rounded-[28px] p-8 no-print">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                  <div className="max-w-4xl">
-                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestión</p>
-                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
-                    <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
-                      Plataforma para estandarizar recetas, controlar food cost y definir precios técnicos de venta con reportes ejecutivos.
-                    </p>
-                  </div>
-                  <a
-                    href={APP_DOWNLOAD_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center px-7 py-4 rounded-2xl bg-cyan-500 text-black font-black uppercase tracking-[0.2em] text-[11px] hover:bg-cyan-400 transition-all"
-                  >
-                    Descargar App
-                  </a>
+                <div className="max-w-4xl">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestión</p>
+                  <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
+                  <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
+                    Plataforma para estandarizar recetas, controlar food cost y definir precios técnicos de venta con reportes ejecutivos.
+                  </p>
                 </div>
               </section>
 
