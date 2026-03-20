@@ -27,8 +27,10 @@ const App = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
   const [credentials, setCredentials] = useState({ email: "", pass: "" });
   const [loginError, setLoginError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
   const [typewriterText, setTypewriterText] = useState("");
   const [logoSourceIndex, setLogoSourceIndex] = useState(0);
   const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
@@ -84,6 +86,7 @@ const App = () => {
 
     setIsSubmittingAuth(true);
     setLoginError("");
+    setAuthNotice("");
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -98,6 +101,47 @@ const App = () => {
       setCredentials({ email, pass: "" });
     }
 
+    setIsSubmittingAuth(false);
+  };
+
+  const handleRegister = async () => {
+    if (isSubmittingAuth) return;
+
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
+      return;
+    }
+    if (pass.length < 6) {
+      setLoginError("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+    setLoginError("");
+    setAuthNotice("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass
+    });
+
+    if (error) {
+      setLoginError(error.message || "No se pudo crear el acceso.");
+      setCredentials({ email, pass: "" });
+      setIsSubmittingAuth(false);
+      return;
+    }
+
+    const requiresConfirmation = !data.session;
+    setCredentials({ email, pass: "" });
+    setAuthNotice(
+      requiresConfirmation
+        ? "Acceso creado. Revisa tu correo para confirmar la cuenta antes de ingresar."
+        : "Acceso creado correctamente. Ya puedes ingresar."
+    );
+    setAuthMode("login");
     setIsSubmittingAuth(false);
   };
 
@@ -702,6 +746,39 @@ const App = () => {
               Sistema de Ingenieria Maestra
             </p>
 
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "login"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Ingresar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "register"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Crear Acceso
+              </button>
+            </div>
+
             <form onSubmit={handleAuth} className="space-y-4">
               <div className="relative group text-left">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
@@ -719,7 +796,7 @@ const App = () => {
                 <input
                   type={showPassword ? "text" : "password"}
                   className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
-                  placeholder="Token de Seguridad"
+                  placeholder="Contrasena"
                   value={credentials.pass}
                   onChange={(e) => setCredentials({ ...credentials, pass: e.target.value })}
                 />
@@ -733,15 +810,39 @@ const App = () => {
                   {loginError}
                 </p>
               )}
+              {authNotice && (
+                <div className="rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-left">
+                  <p className="text-emerald-200 text-[10px] font-black uppercase tracking-[0.24em]">
+                    Revision de correo requerida
+                  </p>
+                  <p className="mt-2 text-emerald-100 text-xs font-bold leading-relaxed">
+                    {authNotice}
+                  </p>
+                  <p className="mt-2 text-emerald-200/80 text-[10px] uppercase tracking-[0.16em]">
+                    Revisa bandeja principal, spam o promociones.
+                  </p>
+                </div>
+              )}
 
               <button
                 disabled={isSubmittingAuth}
                 className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isSubmittingAuth ? "Validando..." : "Ingresar"}
+                {isSubmittingAuth ? "Procesando..." : authMode === "login" ? "Ingresar" : "Crear Acceso"}
                 <ArrowRight size={16} />
               </button>
             </form>
+
+            {authMode === "register" && (
+              <button
+                type="button"
+                onClick={handleRegister}
+                disabled={isSubmittingAuth}
+                className="w-full mt-4 h-12 rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-200 font-black uppercase tracking-[0.22em] text-[10px] hover:bg-amber-300/15 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                Registrar Nuevo Usuario
+              </button>
+            )}
 
             <div className="lg:hidden mt-8 min-h-[20px]">
               <p className="text-red-400/90 text-[10px] font-black uppercase tracking-[0.18em] italic">
@@ -1534,7 +1635,5 @@ const App = () => {
 };
 
 export default App;
-
-
 
 
