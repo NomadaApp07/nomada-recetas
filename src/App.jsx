@@ -9,6 +9,10 @@ import { supabase } from './supabaseClient';
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
   const APP_DOWNLOAD_URL = (import.meta.env.VITE_SIMULADOR_APP_URL || "https://simulador-rentabilidad-c0d13rh4t-nomada-consultoriass-projects.vercel.app/").trim();
+  const APP_PUBLIC_URL = (
+    import.meta.env.VITE_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+  ).trim();
   const STORAGE_KEY = "nomada_elite_state_v1";
   const THEME_KEY = "nomada_elite_theme_v1";
   const LOGIN_LOGO_SOURCES = [
@@ -124,7 +128,10 @@ const App = () => {
 
     const { data, error } = await supabase.auth.signUp({
       email,
-      password: pass
+      password: pass,
+      options: {
+        emailRedirectTo: APP_PUBLIC_URL || undefined
+      }
     });
 
     if (error) {
@@ -1635,5 +1642,4 @@ const App = () => {
 };
 
 export default App;
-
 
