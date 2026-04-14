@@ -14,16 +14,6 @@ const App = () => {
   ).trim();
   const STORAGE_KEY = "nomada_elite_state_v1";
   const THEME_KEY = "nomada_elite_theme_v1";
-  const LOGIN_LOGO_SOURCES = [
-    "/branding/nomada-logo-white.png",
-    "/branding/nomada-logo-white.svg",
-    "/branding/nomada-logo-negro.png",
-    "/branding/nomada-logo-dark.png",
-    "/branding/nomada-logo.png",
-    "/branding/nomada-logo.svg",
-    "/branding/logo.png",
-    "/nomada-logo.png"
-  ];
   
   // --- CÓDIGOS DE ACCESO VÁLIDOS ---
   const VALID_CODES = ["demo", "admin", "nomada123", "user123"];
@@ -636,28 +626,17 @@ const App = () => {
           <section className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-b from-white/[0.07] to-transparent">
             <div>
               <div className="mb-5 flex justify-start">
-                {logoSourceIndex < LOGIN_LOGO_SOURCES.length ? (
-                  <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3">
-                    <img
-                      src={LOGIN_LOGO_SOURCES[logoSourceIndex]}
-                      alt="Logo Nómada"
-                      className="w-44 sm:w-52 h-auto object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
-                      onError={() => setLogoSourceIndex((prev) => prev + 1)}
-                    />
+                <div className="inline-flex items-center gap-3 bg-white/[0.03] border border-white/15 rounded-2xl px-4 py-3">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-zinc-100">
+                    <path d="M4 20L20 4M4 4L20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                  <div className="text-left leading-tight">
+                    <p className="text-[10px] text-zinc-200 font-black uppercase tracking-[0.25em]">Nomada</p>
+                    <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.18em]">Consultorias Gastronomicas</p>
                   </div>
-                ) : (
-                  <div className="inline-flex items-center gap-3 bg-white/[0.03] border border-white/15 rounded-2xl px-4 py-3">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-zinc-100">
-                      <path d="M4 20L20 4M4 4L20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
-                      <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                    <div className="text-left leading-tight">
-                      <p className="text-[10px] text-zinc-200 font-black uppercase tracking-[0.25em]">Nomada</p>
-                      <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.18em]">Consultorias Gastronomicas</p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
               <h2 className="mt-4 text-5xl leading-[0.95] font-black italic tracking-tight text-white">
                 Nómada<span className="text-amber-300">Elite</span>
@@ -667,8 +646,7 @@ const App = () => {
               </p>
             </div>
             <p className="text-red-400/90 text-[11px] uppercase tracking-[0.2em] font-black italic">
-              "{typewriterText}"
-              <span className="animate-pulse border-r border-red-500 ml-1" />
+              "Mientras ellos adivinan nosotros ejecutamos."
             </p>
           </section>
 
