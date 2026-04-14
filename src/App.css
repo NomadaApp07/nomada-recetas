@@ -1,42 +1,333 @@
-#root {
-  max-width: 1280px;
+.app-container {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 2rem 1rem 4rem;
+  color: #f4f4f4;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.hero {
+  background: linear-gradient(135deg, #0f172a, #111827);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.label {
+  display: inline-flex;
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: #fbbf24;
+  color: #111827;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3.5rem);
+}
+
+.hero p {
+  margin: 1rem 0 0;
+  max-width: 42rem;
+  line-height: 1.75;
+  color: #d1d5db;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.stat-card {
+  padding: 1rem 1.1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+.stat-card span {
+  display: block;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 0.65rem;
+  font-size: 1.55rem;
+  color: #fff;
+}
+
+.content {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.form-card,
+.posts-card {
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 28px;
+  padding: 1.75rem;
+  box-shadow: 0 24px 45px rgba(0, 0, 0, 0.12);
+}
+
+.form-card h2,
+.posts-card h2 {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.6rem;
+}
+
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #f8fafc;
+  padding: 0.95rem 1rem;
+  font: inherit;
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+button {
+  margin-top: 0.5rem;
+  border: none;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  color: #111827;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 28px rgba(255, 159, 13, 0.16);
+}
+
+.error {
+  color: #fecaca;
+  margin: 0;
+}
+
+.empty-state {
+  color: #cbd5e1;
+}
+
+.posts-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.posts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+
+.summary-row span {
+  padding: 0.6rem 0.9rem;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 999px;
+}
+
+.posts-controls {
+  display: grid;
+  gap: 0.75rem;
+  align-items: end;
+  justify-items: end;
+}
+
+.posts-controls label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.csv-button {
+  border: none;
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.csv-button:hover {
+  background: #2563eb;
+}
+
+.post-item {
+  background: rgba(30, 41, 59, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 24px;
+  padding: 1.35rem;
+}
+
+.post-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.post-header strong {
+  display: block;
+  font-size: 1.05rem;
+  color: #f8fafc;
+}
+
+.post-owner {
+  margin: 0.25rem 0 0;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.post-detail {
+  color: #e2e8f0;
+  line-height: 1.85;
+  margin: 0.75rem 0 0;
+}
+
+.post-contacto {
+  margin: 0.75rem 0 0;
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.post-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.post-type-venta {
+  background: #fbbf24;
+  color: #111827;
+}
+
+.post-type-inventario {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.post-type-receta {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.delete-button {
+  margin-top: 1rem;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: rgba(244, 63, 94, 0.12);
+  color: #fecaca;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.delete-button:hover {
+  background: rgba(244, 63, 94, 0.22);
+}
+
+@media (min-width: 900px) {
+  .content {
+    grid-template-columns: 1fr 1.2fr;
+    align-items: start;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+@media (max-width: 720px) {
+  .app-container {
+    padding: 1.2rem 1rem 2.5rem;
   }
-}
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .hero {
+    padding: 1.8rem 1rem;
+    border-radius: 24px;
   }
-}
 
-.card {
-  padding: 2em;
-}
+  .hero-stats {
+    grid-template-columns: 1fr 1fr;
+  }
 
-.read-the-docs {
-  color: #888;
+  .form-card,
+  .posts-card {
+    padding: 1.2rem;
+    border-radius: 22px;
+  }
+
+  .posts-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .posts-controls {
+    justify-items: stretch;
+  }
+
+  .csv-button,
+  button {
+    width: 100%;
+  }
+
+  .post-meta {
+    justify-content: space-between;
+  }
 }
