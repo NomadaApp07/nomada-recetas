@@ -4,7 +4,6 @@ import {
   Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
   AlertTriangle, CheckCircle2, XCircle, TrendingUp, Anchor, Settings, Skull, Activity, Sun, Moon
 } from 'lucide-react';
-import { supabase } from './supabaseClient';
 
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
@@ -26,38 +25,72 @@ const App = () => {
     "/nomada-logo.png"
   ];
   
+  // --- CÓDIGOS DE ACCESO VÁLIDOS ---
+  const VALID_CODES = ["demo", "admin", "nomada123", "user123"];
+  
   // --- ESTADO DE AUTENTICACION ---
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("nomada_auth_token");
+    }
+    return false;
+  });
   const [authLoading, setAuthLoading] = useState(false);
-  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
-  const [credentials, setCredentials] = useState({ email: "", pass: "" });
+  const [accessCode, setAccessCode] = useState("");
+  const [userName, setUserName] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nomada_user_name") || "";
+    }
+    return "";
+  });
   const [loginError, setLoginError] = useState("");
-  const [authNotice, setAuthNotice] = useState("");
-  const [typewriterText, setTypewriterText] = useState("");
-  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
-  const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   useEffect(() => {
-    // Acceso público - sin autenticación Supabase
+    // Verificar si hay sesión guardada
     setAuthLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (authLoading || isAuthenticated) return;
-    let i = 0;
-    const timer = setInterval(() => {
-      setTypewriterText(fullPhrase.slice(0, i));
-      i++;
-      if (i > fullPhrase.length) clearInterval(timer);
-    }, 50);
-    return () => clearInterval(timer);
-  }, [authLoading, isAuthenticated]);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (isSubmittingAuth) return;
 
-  const handleAuth = () => {}; // Autenticación deshabilitada
-  const handleRegister = () => {}; // Registro deshabilitado
-  const handleLogout = () => {}; // Logout deshabilitado
+    const code = accessCode.trim().toLowerCase();
+    const name = userName.trim();
+
+    if (!name) {
+      setLoginError("Ingresa tu nombre o usuario");
+      return;
+    }
+
+    if (!code) {
+      setLoginError("Ingresa el código de acceso");
+      return;
+    }
+
+    if (!VALID_CODES.includes(code)) {
+      setLoginError("Código de acceso inválido");
+      setAccessCode("");
+      return;
+    }
+
+    // Guardar sesión en localStorage
+    localStorage.setItem("nomada_auth_token", code);
+    localStorage.setItem("nomada_user_name", name);
+    
+    setIsAuthenticated(true);
+    setLoginError("");
+    setAccessCode("");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("nomada_auth_token");
+    localStorage.removeItem("nomada_user_name");
+    setIsAuthenticated(false);
+    setUserName("");
+    setAccessCode("");
+    setLoginError("");
+  };
 
   // --- LOGICA DE NEGOCIO ---
   const [offset, setOffset] = useState(0);
@@ -642,73 +675,40 @@ const App = () => {
           <section className="p-8 sm:p-12">
             <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
               <div className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
-              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.22em]">Elite Access</span>
+              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.22em]">Acceso Simple</span>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase mb-2">
-              Ingreso Seguro
+              Bienvenido
             </h1>
             <p className="text-zinc-500 text-xs uppercase tracking-[0.25em] mb-8">
-              Sistema de Ingenieria Maestra
+              Ingresa tu nombre y código
             </p>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("login");
-                  setLoginError("");
-                  setAuthNotice("");
-                }}
-                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
-                  authMode === "login"
-                    ? "bg-amber-300 text-black border-amber-300"
-                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
-                }`}
-              >
-                Ingresar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("register");
-                  setLoginError("");
-                  setAuthNotice("");
-                }}
-                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
-                  authMode === "register"
-                    ? "bg-amber-300 text-black border-amber-300"
-                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
-                }`}
-              >
-                Crear Acceso
-              </button>
+            <div className="grid grid-cols-1 gap-0 mb-6">
             </div>
 
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="relative group text-left">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
                 <input
-                  type="email"
+                  type="text"
                   className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
-                  placeholder="Correo de Acceso"
-                  value={credentials.email}
-                  onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                  placeholder="Tu nombre o usuario"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
                 />
               </div>
 
               <div className="relative group text-left">
                 <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
                 <input
-                  type={showPassword ? "text" : "password"}
-                  className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
-                  placeholder="Contrasena"
-                  value={credentials.pass}
-                  onChange={(e) => setCredentials({ ...credentials, pass: e.target.value })}
+                  type="text"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Código de acceso"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
               </div>
 
               {loginError && (
@@ -716,44 +716,24 @@ const App = () => {
                   {loginError}
                 </p>
               )}
-              {authNotice && (
-                <div className="rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-left">
-                  <p className="text-emerald-200 text-[10px] font-black uppercase tracking-[0.24em]">
-                    Revision de correo requerida
-                  </p>
-                  <p className="mt-2 text-emerald-100 text-xs font-bold leading-relaxed">
-                    {authNotice}
-                  </p>
-                  <p className="mt-2 text-emerald-200/80 text-[10px] uppercase tracking-[0.16em]">
-                    Revisa bandeja principal, spam o promociones.
-                  </p>
-                </div>
-              )}
 
               <button
                 disabled={isSubmittingAuth}
                 className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isSubmittingAuth ? "Procesando..." : authMode === "login" ? "Ingresar" : "Crear Acceso"}
+                {isSubmittingAuth ? "Accediendo..." : "Acceder"}
                 <ArrowRight size={16} />
               </button>
             </form>
 
-            {authMode === "register" && (
-              <button
-                type="button"
-                onClick={handleRegister}
-                disabled={isSubmittingAuth}
-                className="w-full mt-4 h-12 rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-200 font-black uppercase tracking-[0.22em] text-[10px] hover:bg-amber-300/15 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                Registrar Nuevo Usuario
-              </button>
-            )}
+            <div className="mt-6 text-center text-zinc-400 text-[10px]">
+              <p className="font-black uppercase tracking-widest mb-2">Códigos de acceso disponibles:</p>
+              <p className="font-mono text-amber-300">{VALID_CODES.join(" • ")}</p>
+            </div>
 
             <div className="lg:hidden mt-8 min-h-[20px]">
               <p className="text-red-400/90 text-[10px] font-black uppercase tracking-[0.18em] italic">
-                "{typewriterText}"
-                <span className="animate-pulse border-r border-red-500 ml-1" />
+                "Mientras ellos adivinan nosotros ejecutamos."
               </p>
             </div>
           </section>
@@ -839,8 +819,11 @@ const App = () => {
             <button onClick={exportarPDF} className="bg-white text-black px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#06b6d4] hover:text-white transition-all shadow-lg">
               <FileDown size={14} /> Exportar Reporte PDF
             </button>
+            <div className="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+              <User size={14} /> {userName}
+            </div>
             <button onClick={handleLogout} className="bg-white/5 border border-white/10 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/20 transition-all">
-              <Unlock size={14} /> Bloquear
+              <Unlock size={14} /> Salir
             </button>
           </div>
         </header>
