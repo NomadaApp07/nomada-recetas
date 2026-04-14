@@ -4,6 +4,7 @@ import {
   Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
   AlertTriangle, CheckCircle2, XCircle, TrendingUp, Anchor, Settings, Skull, Activity, Sun, Moon
 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const App = () => {
   const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
@@ -26,19 +27,138 @@ const App = () => {
   ];
   
   // --- ESTADO DE AUTENTICACION ---
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [credentials, setCredentials] = useState({ email: "", pass: "" });
+  const [loginError, setLoginError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const [typewriterText, setTypewriterText] = useState("");
+  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
+  const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
 
   useEffect(() => {
-    // App cargada sin autenticación requerida
-    setAuthLoading(false);
+    let isMounted = true;
+
+    const bootstrapAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("No se pudo recuperar la sesion", error);
+      }
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(data.session));
+      setAuthLoading(false);
+    };
+
+    bootstrapAuth();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(session));
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  // Typewriter effect removido - no es necesario
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      setTypewriterText(fullPhrase.slice(0, i));
+      i++;
+      if (i > fullPhrase.length) clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, [authLoading, isAuthenticated]);
 
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    if (isSubmittingAuth) return;
 
-  // Funciones de autenticación removidas - app sin login
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
+      return;
+    }
 
+    setIsSubmittingAuth(true);
+    setLoginError("");
+    setAuthNotice("");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass
+    });
+
+    if (error) {
+      setLoginError("Credenciales invalidas o usuario no confirmado.");
+      setCredentials({ email, pass: "" });
+    } else {
+      setIsAuthenticated(true);
+      setCredentials({ email, pass: "" });
+    }
+
+    setIsSubmittingAuth(false);
+  };
+
+  const handleRegister = async () => {
+    if (isSubmittingAuth) return;
+
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
+      return;
+    }
+    if (pass.length < 6) {
+      setLoginError("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+    setLoginError("");
+    setAuthNotice("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: {
+        emailRedirectTo: APP_PUBLIC_URL || undefined
+      }
+    });
+
+    if (error) {
+      setLoginError(error.message || "No se pudo crear el acceso.");
+      setCredentials({ email, pass: "" });
+      setIsSubmittingAuth(false);
+      return;
+    }
+
+    const requiresConfirmation = !data.session;
+    setCredentials({ email, pass: "" });
+    setAuthNotice(
+      requiresConfirmation
+        ? "Acceso creado. Revisa tu correo para confirmar la cuenta antes de ingresar."
+        : "Acceso creado correctamente. Ya puedes ingresar."
+    );
+    setAuthMode("login");
+    setIsSubmittingAuth(false);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("No se pudo cerrar sesion", error);
+    }
+    setIsAuthenticated(false);
+  };
 
   // --- LOGICA DE NEGOCIO ---
   const [offset, setOffset] = useState(0);
@@ -562,7 +682,187 @@ const App = () => {
 
   const exportarPDF = () => window.print();
 
-  // --- PANEL PRINCIPAL ---
+  // --- INTERFAZ DE LOGIN ---
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6">
+        <p className="text-zinc-400 text-xs uppercase tracking-[0.25em] font-black">Validando sesion...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans']">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-amber-300/10 blur-[120px]" />
+          <div className="absolute -bottom-24 -right-20 w-[420px] h-[420px] rounded-full bg-zinc-400/10 blur-[120px]" />
+          <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-2 rounded-[40px] overflow-hidden border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl bg-black/45">
+          <section className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-b from-white/[0.07] to-transparent">
+            <div>
+              <div className="mb-5 flex justify-start">
+                {logoSourceIndex < LOGIN_LOGO_SOURCES.length ? (
+                  <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3">
+                    <img
+                      src={LOGIN_LOGO_SOURCES[logoSourceIndex]}
+                      alt="Logo Nómada"
+                      className="w-44 sm:w-52 h-auto object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
+                      onError={() => setLogoSourceIndex((prev) => prev + 1)}
+                    />
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-3 bg-white/[0.03] border border-white/15 rounded-2xl px-4 py-3">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-zinc-100">
+                      <path d="M4 20L20 4M4 4L20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                    <div className="text-left leading-tight">
+                      <p className="text-[10px] text-zinc-200 font-black uppercase tracking-[0.25em]">Nomada</p>
+                      <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.18em]">Consultorias Gastronomicas</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <h2 className="mt-4 text-5xl leading-[0.95] font-black italic tracking-tight text-white">
+                Nómada<span className="text-amber-300">Elite</span>
+              </h2>
+              <p className="mt-5 text-zinc-400 text-sm leading-relaxed max-w-[34ch]">
+                Centro de mando para ingenieria de costos, pricing y rentabilidad gastronomica.
+              </p>
+            </div>
+            <p className="text-red-400/90 text-[11px] uppercase tracking-[0.2em] font-black italic">
+              "{typewriterText}"
+              <span className="animate-pulse border-r border-red-500 ml-1" />
+            </p>
+          </section>
+
+          <section className="p-8 sm:p-12">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
+              <div className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.22em]">Elite Access</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase mb-2">
+              Ingreso Seguro
+            </h1>
+            <p className="text-zinc-500 text-xs uppercase tracking-[0.25em] mb-8">
+              Sistema de Ingenieria Maestra
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "login"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Ingresar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "register"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Crear Acceso
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="relative group text-left">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type="email"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Correo de Acceso"
+                  value={credentials.email}
+                  onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                />
+              </div>
+
+              <div className="relative group text-left">
+                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Contrasena"
+                  value={credentials.pass}
+                  onChange={(e) => setCredentials({ ...credentials, pass: e.target.value })}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
+              {loginError && (
+                <p className="text-red-400 text-[10px] font-black uppercase text-center tracking-[0.25em] animate-pulse pt-1">
+                  {loginError}
+                </p>
+              )}
+              {authNotice && (
+                <div className="rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-left">
+                  <p className="text-emerald-200 text-[10px] font-black uppercase tracking-[0.24em]">
+                    Revision de correo requerida
+                  </p>
+                  <p className="mt-2 text-emerald-100 text-xs font-bold leading-relaxed">
+                    {authNotice}
+                  </p>
+                  <p className="mt-2 text-emerald-200/80 text-[10px] uppercase tracking-[0.16em]">
+                    Revisa bandeja principal, spam o promociones.
+                  </p>
+                </div>
+              )}
+
+              <button
+                disabled={isSubmittingAuth}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmittingAuth ? "Procesando..." : authMode === "login" ? "Ingresar" : "Crear Acceso"}
+                <ArrowRight size={16} />
+              </button>
+            </form>
+
+            {authMode === "register" && (
+              <button
+                type="button"
+                onClick={handleRegister}
+                disabled={isSubmittingAuth}
+                className="w-full mt-4 h-12 rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-200 font-black uppercase tracking-[0.22em] text-[10px] hover:bg-amber-300/15 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                Registrar Nuevo Usuario
+              </button>
+            )}
+
+            <div className="lg:hidden mt-8 min-h-[20px]">
+              <p className="text-red-400/90 text-[10px] font-black uppercase tracking-[0.18em] italic">
+                "{typewriterText}"
+                <span className="animate-pulse border-r border-red-500 ml-1" />
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+  // --- PANEL PRINCIPAL (VERSION v9.42 BASE) ---
   return (
     <div className={`min-h-screen text-white p-6 lg:p-10 selection:bg-cyan-500/30 relative overflow-hidden ${theme === "light" ? "theme-light bg-[#eef2f7]" : "theme-dark bg-[#050505]"}`}>
       <div 
