@@ -1,276 +1,1645 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+﻿import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Calculator, Save, Database, Plus, Trash2, 
+  Target, ShieldCheck, Zap, Lock, Key, ArrowRight, User, Eye, EyeOff, Unlock, FileDown,
+  AlertTriangle, CheckCircle2, XCircle, TrendingUp, Anchor, Settings, Skull, Activity, Sun, Moon
+} from 'lucide-react';
+import { supabase } from './supabaseClient';
 
-const STORAGE_KEY = 'merchantPosts'
-const tipoOpciones = [
-  { value: 'venta', label: 'Venta' },
-  { value: 'inventario', label: 'Inventario' },
-  { value: 'receta', label: 'Receta' },
-]
-const tipoLabel = {
-  venta: 'Venta realizada',
-  inventario: 'Movimiento de inventario',
-  receta: 'Receta estándar',
-}
-const tipoPlaceholder = {
-  venta: 'Ej: 25 tacos vendidos por $1250, o 10 vasos de jugo por $80',
-  inventario: 'Ej: 20 panes, 5 litros de aceite, 12 bolsas de tortillas',
-  receta: 'Ej: receta de taco al pastor con ingredientes y preparación',
-}
-
-function App() {
-  const [posts, setPosts] = useState(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : []
-  })
-  const [form, setForm] = useState({ nombre: '', negocio: '', tipo: 'venta', titulo: '', detalle: '', monto: '', contacto: '' })
-  const [filtroTipo, setFiltroTipo] = useState('todos')
-  const [error, setError] = useState('')
+const App = () => {
+  const VERSION = "NÓMADA ELITE v9.60 - SUPREME ARCHITECT";
+  const APP_DOWNLOAD_URL = (import.meta.env.VITE_SIMULADOR_APP_URL || "https://simulador-rentabilidad-c0d13rh4t-nomada-consultoriass-projects.vercel.app/").trim();
+  const APP_PUBLIC_URL = (
+    import.meta.env.VITE_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+  ).trim();
+  const STORAGE_KEY = "nomada_elite_state_v1";
+  const THEME_KEY = "nomada_elite_theme_v1";
+  const LOGIN_LOGO_SOURCES = [
+    "/branding/nomada-logo-white.png",
+    "/branding/nomada-logo-white.svg",
+    "/branding/nomada-logo-negro.png",
+    "/branding/nomada-logo-dark.png",
+    "/branding/nomada-logo.png",
+    "/branding/nomada-logo.svg",
+    "/branding/logo.png",
+    "/nomada-logo.png"
+  ];
+  
+  // --- ESTADO DE AUTENTICACION ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [credentials, setCredentials] = useState({ email: "", pass: "" });
+  const [loginError, setLoginError] = useState("");
+  const [authNotice, setAuthNotice] = useState("");
+  const [typewriterText, setTypewriterText] = useState("");
+  const [logoSourceIndex, setLogoSourceIndex] = useState(0);
+  const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(posts))
-  }, [posts])
+    let isMounted = true;
 
-  const filteredPosts = filtroTipo === 'todos' ? posts : posts.filter((post) => post.tipo === filtroTipo)
-  const totalVentas = posts.reduce((sum, post) => sum + (post.tipo === 'venta' ? Number(post.monto || 0) : 0), 0)
-  const totalByType = {
-    venta: posts.filter((post) => post.tipo === 'venta').length,
-    inventario: posts.filter((post) => post.tipo === 'inventario').length,
-    receta: posts.filter((post) => post.tipo === 'receta').length,
-  }
+    const bootstrapAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("No se pudo recuperar la sesion", error);
+      }
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(data.session));
+      setAuthLoading(false);
+    };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    bootstrapAuth();
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    if (!form.nombre.trim() || !form.negocio.trim() || !form.titulo.trim() || !form.detalle.trim()) {
-      setError('Completa nombre, negocio, título y detalles antes de publicar.')
-      return
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      setIsAuthenticated(Boolean(session));
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || isAuthenticated) return;
+    let i = 0;
+    const timer = setInterval(() => {
+      setTypewriterText(fullPhrase.slice(0, i));
+      i++;
+      if (i > fullPhrase.length) clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, [authLoading, isAuthenticated]);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    if (isSubmittingAuth) return;
+
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
+      return;
     }
-    if (form.tipo === 'venta' && !form.monto.trim()) {
-      setError('Agrega el monto de la venta para calcular los totales.')
-      return
+
+    setIsSubmittingAuth(true);
+    setLoginError("");
+    setAuthNotice("");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass
+    });
+
+    if (error) {
+      setLoginError("Credenciales invalidas o usuario no confirmado.");
+      setCredentials({ email, pass: "" });
+    } else {
+      setIsAuthenticated(true);
+      setCredentials({ email, pass: "" });
     }
 
-    const nuevoPost = {
+    setIsSubmittingAuth(false);
+  };
+
+  const handleRegister = async () => {
+    if (isSubmittingAuth) return;
+
+    const email = credentials.email.trim().toLowerCase();
+    const pass = credentials.pass.trim();
+    if (!email || !pass) {
+      setLoginError("Ingresa correo y contrasena.");
+      return;
+    }
+    if (pass.length < 6) {
+      setLoginError("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+    setLoginError("");
+    setAuthNotice("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: {
+        emailRedirectTo: APP_PUBLIC_URL || undefined
+      }
+    });
+
+    if (error) {
+      setLoginError(error.message || "No se pudo crear el acceso.");
+      setCredentials({ email, pass: "" });
+      setIsSubmittingAuth(false);
+      return;
+    }
+
+    const requiresConfirmation = !data.session;
+    setCredentials({ email, pass: "" });
+    setAuthNotice(
+      requiresConfirmation
+        ? "Acceso creado. Revisa tu correo para confirmar la cuenta antes de ingresar."
+        : "Acceso creado correctamente. Ya puedes ingresar."
+    );
+    setAuthMode("login");
+    setIsSubmittingAuth(false);
+  };
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("No se pudo cerrar sesion", error);
+    }
+    setIsAuthenticated(false);
+  };
+
+  // --- LOGICA DE NEGOCIO ---
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const handleScroll = () => setOffset(window.pageYOffset);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const [nombreReceta, setNombreReceta] = useState("");
+  const [costoMaximo, setCostoMaximo] = useState(0);
+  const [activeTab, setActiveTab] = useState("receta");
+  const crearIngrediente = () => ({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    tipo: "insumo",
+    nombre: "",
+    unidad: "GR",
+    cant: "",
+    precio: "",
+    subRecetaId: ""
+  });
+  const [ingredientes, setIngredientes] = useState([
+    { id: 1, tipo: "insumo", nombre: "", unidad: "GR", cant: "", precio: "", subRecetaId: "" }
+  ]);
+  const [subRecetas, setSubRecetas] = useState([
+    {
+      id: 1,
+      nombre: "",
+      rendimiento: "",
+      ingredientes: [{ id: 1, nombre: "", unidad: "GR", cant: "", precio: "" }]
+    }
+  ]);
+  
+  const [params, setParams] = useState({
+    error: 0,
+    rendimiento: 0,
+    target: 0,
+    tax: 0
+  });
+  const [evento, setEvento] = useState({
+    nomina: 0,
+    arriendo: 0,
+    servicios: 0,
+    otros: 0,
+    utilidadObjetivo: 0,
+    cantidadPlatos: 0
+  });
+  const [recetasCloud, setRecetasCloud] = useState([]);
+  const [selectedRecetaId, setSelectedRecetaId] = useState("");
+  const [selectedSubrecetaId, setSelectedSubrecetaId] = useState("");
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudSaving, setCloudSaving] = useState(false);
+  const [cloudMessage, setCloudMessage] = useState("");
+  const [cloudDataColumn, setCloudDataColumn] = useState("payload");
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") return "dark";
+    return localStorage.getItem(THEME_KEY) || "dark";
+  });
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  const buildRecetaPayload = () => ({
+    nombreReceta,
+    costoMaximo,
+    ingredientes,
+    subRecetas,
+    params,
+    evento,
+    activeTab
+  });
+
+  const buildPayloadByMode = (mode) => {
+    if (mode === "subrecetas") {
+      return {
+        nombreReceta,
+        subRecetas,
+        activeTab: "subrecetas"
+      };
+    }
+    return buildRecetaPayload();
+  };
+
+  const hydrateRecetaState = (payload) => {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.nombreReceta === "string") setNombreReceta(payload.nombreReceta);
+    if (payload.costoMaximo !== undefined) setCostoMaximo(payload.costoMaximo);
+    if (Array.isArray(payload.ingredientes) && payload.ingredientes.length > 0) setIngredientes(payload.ingredientes);
+    if (Array.isArray(payload.subRecetas) && payload.subRecetas.length > 0) setSubRecetas(payload.subRecetas);
+    if (payload.params && typeof payload.params === "object") setParams((prev) => ({ ...prev, ...payload.params }));
+    if (payload.evento && typeof payload.evento === "object") setEvento((prev) => ({ ...prev, ...payload.evento }));
+    if (payload.activeTab === "receta" || payload.activeTab === "subrecetas" || payload.activeTab === "empresa") setActiveTab(payload.activeTab);
+  };
+
+  const normalizeRecetaRow = (row) => {
+    const candidatePayload = row?.payload ?? row?.data ?? null;
+    const payload = candidatePayload && typeof candidatePayload === "object" ? candidatePayload : null;
+    return {
+      id: row?.id,
+      nombre: row?.nombre || payload?.nombreReceta || "RECETA SIN NOMBRE",
+      payload,
+      updatedAt: row?.updated_at || row?.created_at || null
+    };
+  };
+
+  const getPayloadColumnFromRows = useCallback((rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return cloudDataColumn;
+    const firstWithPayload = rows.find((row) => row && typeof row === "object") || {};
+    if (Object.prototype.hasOwnProperty.call(firstWithPayload, "payload")) return "payload";
+    if (Object.prototype.hasOwnProperty.call(firstWithPayload, "data")) return "data";
+    return cloudDataColumn;
+  }, [cloudDataColumn]);
+
+  const getRowMode = (row) => {
+    if (row?.payload?.activeTab === "subrecetas") return "subrecetas";
+    return "receta";
+  };
+
+  const getRowsByMode = (mode) => {
+    if (mode === "subrecetas") return recetasCloud.filter((row) => getRowMode(row) === "subrecetas");
+    return recetasCloud.filter((row) => getRowMode(row) !== "subrecetas");
+  };
+
+  const getSelectedIdByMode = (mode) => (mode === "subrecetas" ? selectedSubrecetaId : selectedRecetaId);
+  const setSelectedIdByMode = (mode, value) => {
+    if (mode === "subrecetas") {
+      setSelectedSubrecetaId(value);
+      return;
+    }
+    setSelectedRecetaId(value);
+  };
+
+  const isMissingColumnError = (error, col) => {
+    if (!error?.message) return false;
+    const msg = error.message.toLowerCase();
+    return msg.includes(`column "${col}"`) || msg.includes(`column ${col}`);
+  };
+
+  const loadRecetasCloud = useCallback(async () => {
+    setCloudLoading(true);
+    setCloudMessage("");
+
+    const { data, error } = await supabase.from("recetas").select("*");
+    if (error) {
+      setCloudLoading(false);
+      setCloudMessage(`No se pudo cargar recetas desde Supabase: ${error.message}`);
+      console.error("Error al listar recetas", error);
+      return;
+    }
+
+    const detectedColumn = getPayloadColumnFromRows(data);
+    setCloudDataColumn(detectedColumn);
+
+    const normalized = (data || [])
+      .map(normalizeRecetaRow)
+      .filter((row) => row.id)
+      .sort((a, b) => {
+        const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    setRecetasCloud(normalized);
+    setCloudLoading(false);
+  }, [getPayloadColumnFromRows]);
+
+  const saveRecetaCloud = async (mode = "receta") => {
+    if (cloudSaving) return;
+
+    const isSubrecetasMode = mode === "subrecetas";
+    const selectedId = getSelectedIdByMode(mode);
+    const nombreBase = (nombreReceta || "").trim();
+    const fallbackName = `BANCO-SUBRECETAS-${new Date().toLocaleDateString("es-CO")}`;
+    const nombre = nombreBase || (isSubrecetasMode ? fallbackName : "");
+    if (!nombre) {
+      setCloudMessage("Debes asignar un nombre a la receta antes de guardar.");
+      return;
+    }
+
+    setCloudSaving(true);
+    setCloudMessage("");
+
+    const payload = buildPayloadByMode(mode);
+
+    const persistWithColumn = async (columnName) => {
+      const record = { nombre, [columnName]: payload };
+      if (selectedId) {
+        return supabase.from("recetas").update(record).eq("id", selectedId).select("id").single();
+      }
+      return supabase.from("recetas").insert(record).select("id").single();
+    };
+
+    let currentColumn = cloudDataColumn;
+    let result = await persistWithColumn(currentColumn);
+    if (result.error && (isMissingColumnError(result.error, currentColumn) || result.error.code === "PGRST204")) {
+      const alternateColumn = currentColumn === "payload" ? "data" : "payload";
+      const retry = await persistWithColumn(alternateColumn);
+      if (!retry.error) {
+        currentColumn = alternateColumn;
+        result = retry;
+      }
+    }
+
+    if (result.error) {
+      setCloudSaving(false);
+      setCloudMessage("Error guardando receta en Supabase.");
+      console.error("Error al guardar receta", result.error);
+      return;
+    }
+
+    setCloudDataColumn(currentColumn);
+    setSelectedIdByMode(mode, result.data?.id ? String(result.data.id) : selectedId);
+    await loadRecetasCloud();
+    setCloudSaving(false);
+    setCloudMessage(isSubrecetasMode ? "Banco de subrecetas guardado en la nube." : "Receta completa guardada en la nube.");
+  };
+
+  const loadSelectedRecetaCloud = (mode = "receta") => {
+    const selectedId = getSelectedIdByMode(mode);
+    const rows = getRowsByMode(mode);
+    if (!selectedId) {
+      setCloudMessage("Selecciona una receta para cargar.");
+      return;
+    }
+    const selected = rows.find((row) => String(row.id) === String(selectedId));
+    if (!selected || !selected.payload) {
+      setCloudMessage("La receta seleccionada no contiene datos cargables.");
+      return;
+    }
+    if (mode === "subrecetas") {
+      if (Array.isArray(selected.payload.subRecetas) && selected.payload.subRecetas.length > 0) {
+        setSubRecetas(selected.payload.subRecetas);
+      }
+      setActiveTab("subrecetas");
+      setCloudMessage(`Banco de subrecetas cargado: ${selected.nombre}`);
+      return;
+    }
+    hydrateRecetaState(selected.payload);
+    setCloudMessage(`Receta cargada: ${selected.nombre}`);
+  };
+
+  const deleteSelectedRecetaCloud = async (mode = "receta") => {
+    const selectedId = getSelectedIdByMode(mode);
+    const rows = getRowsByMode(mode);
+    if (!selectedId) {
+      setCloudMessage("Selecciona una receta para eliminar.");
+      return;
+    }
+
+    const selected = rows.find((row) => String(row.id) === String(selectedId));
+    const selectedName = selected?.nombre || "esta receta";
+    const confirmed = window.confirm(`Vas a eliminar ${selectedName}. Esta accion no se puede deshacer. Continuar?`);
+    if (!confirmed) {
+      setCloudMessage("Eliminacion cancelada.");
+      return;
+    }
+
+    const { error } = await supabase.from("recetas").delete().eq("id", selectedId);
+    if (error) {
+      setCloudMessage("No se pudo eliminar la receta.");
+      console.error("Error al eliminar receta", error);
+      return;
+    }
+
+    setSelectedIdByMode(mode, "");
+    await loadRecetasCloud();
+    setCloudMessage(mode === "subrecetas" ? "Banco de subrecetas eliminado." : "Receta eliminada.");
+  };
+
+  const crearNuevaReceta = () => {
+    setSelectedRecetaId("");
+    setSelectedSubrecetaId("");
+    setNombreReceta("");
+    setCostoMaximo(0);
+    setIngredientes([{ id: Date.now(), tipo: "insumo", nombre: "", unidad: "GR", cant: "", precio: "", subRecetaId: "" }]);
+    setSubRecetas([
+      {
+        id: Date.now() + 1,
+        nombre: "",
+        rendimiento: "",
+        ingredientes: [{ id: Date.now() + 2, nombre: "", unidad: "GR", cant: "", precio: "" }]
+      }
+    ]);
+    setParams({ error: 0, rendimiento: 0, target: 0, tax: 0 });
+    setEvento({ nomina: 0, arriendo: 0, servicios: 0, otros: 0, utilidadObjetivo: 0, cantidadPlatos: 0 });
+    setActiveTab("receta");
+    setCloudMessage("Nueva receta en blanco.");
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        setIsHydrated(true);
+        return;
+      }
+      const saved = JSON.parse(raw);
+      if (typeof saved.nombreReceta === "string") setNombreReceta(saved.nombreReceta);
+      if (saved.costoMaximo !== undefined) setCostoMaximo(saved.costoMaximo);
+      if (Array.isArray(saved.ingredientes) && saved.ingredientes.length > 0) setIngredientes(saved.ingredientes);
+      if (Array.isArray(saved.subRecetas) && saved.subRecetas.length > 0) setSubRecetas(saved.subRecetas);
+      if (saved.params && typeof saved.params === "object") setParams((prev) => ({ ...prev, ...saved.params }));
+      if (saved.evento && typeof saved.evento === "object") setEvento((prev) => ({ ...prev, ...saved.evento }));
+      if (saved.activeTab === "receta" || saved.activeTab === "subrecetas" || saved.activeTab === "empresa") setActiveTab(saved.activeTab);
+    } catch (error) {
+      console.error("No se pudo cargar estado guardado", error);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated || typeof window === "undefined") return;
+    const payload = { nombreReceta, costoMaximo, ingredientes, subRecetas, params, evento, activeTab };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [isHydrated, nombreReceta, costoMaximo, ingredientes, subRecetas, params, evento, activeTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setRecetasCloud([]);
+      setSelectedRecetaId("");
+      setSelectedSubrecetaId("");
+      setCloudMessage("");
+      return;
+    }
+    loadRecetasCloud();
+  }, [isAuthenticated, loadRecetasCloud]);
+
+  // --- MOTOR DE CALCULO MAESTRO ---
+  const resumenSubRecetas = subRecetas.map((sub) => {
+    const costoTotal = sub.ingredientes.reduce((acc, i) => acc + (Number(i.cant) * Number(i.precio)), 0);
+    const costoUnitario = Number(sub.rendimiento) > 0 ? costoTotal / Number(sub.rendimiento) : 0;
+    return { ...sub, costoTotal, costoUnitario };
+  });
+  const subrecetasEnUsoIds = [
+    ...new Set(
+      ingredientes
+        .filter((i) => i.tipo === "subreceta" && i.subRecetaId)
+        .map((i) => String(i.subRecetaId))
+    )
+  ];
+  const subrecetasDisponibles = resumenSubRecetas.length;
+  const subrecetasEnUso = subrecetasEnUsoIds.length;
+  const subrecetasSinAsignar = ingredientes.filter((i) => i.tipo === "subreceta" && !i.subRecetaId).length;
+
+  const subtotalInsumos = ingredientes.reduce((acc, i) => {
+    if (i.tipo === "subreceta") {
+      const sub = resumenSubRecetas.find((s) => String(s.id) === String(i.subRecetaId));
+      return acc + (Number(i.cant) * Number(sub?.costoUnitario || 0));
+    }
+    return acc + (Number(i.cant) * Number(i.precio));
+  }, 0);
+  const totalCostoProd = subtotalInsumos * (1 + (Number(params.error) / 100));
+  const costoPorcion = params.rendimiento > 0 ? totalCostoProd / Number(params.rendimiento) : 0;
+  const divisorTarget = Number(params.target) / 100;
+  const precioSugeridoBase = divisorTarget > 0 ? costoPorcion / divisorTarget : 0;
+  const precioSugerido = precioSugeridoBase * (1 + (Number(params.tax) / 100));
+  const precioFinalRedondeado = Math.ceil(precioSugerido / 100) * 100;
+  const precioSinTax = precioFinalRedondeado / (1 + (Number(params.tax) / 100));
+  const foodCostReal = precioSinTax > 0 ? (costoPorcion / precioSinTax) * 100 : 0;
+  const margenContribucion = precioSinTax - costoPorcion;
+  const desviacion = foodCostReal - Number(params.target);
+  const costosFijosTotales =
+    Number(evento.nomina || 0) +
+    Number(evento.arriendo || 0) +
+    Number(evento.servicios || 0) +
+    Number(evento.otros || 0);
+  const utilidadObjetivo = Number(evento.utilidadObjetivo || 0);
+  const cantidadPlatos = Number(evento.cantidadPlatos || 0);
+  const puntoEquilibrioPlatos = margenContribucion > 0 ? Math.ceil(costosFijosTotales / margenContribucion) : 0;
+  const platosParaUtilidadObjetivo = margenContribucion > 0 ? Math.ceil((costosFijosTotales + utilidadObjetivo) / margenContribucion) : 0;
+  const utilidadProyectada = (margenContribucion * cantidadPlatos) - costosFijosTotales;
+  const ventaProyectada = precioFinalRedondeado * cantidadPlatos;
+  const costoVariableTotal = costoPorcion * cantidadPlatos;
+
+  const sobrepasoCMP = costoMaximo > 0 && costoPorcion > costoMaximo;
+
+  const getClasificacionNomada = () => {
+    if (costoPorcion <= 0) return { label: "SIN DATA", color: "text-zinc-600", icon: <Zap size={18} /> };
+    
+    const esBajoCosto = costoMaximo > 0 ? costoPorcion <= costoMaximo : foodCostReal <= 30;
+    const esAltoMargen = margenContribucion > (precioSinTax * 0.65);
+
+    if (sobrepasoCMP) return { label: "PASIVO FINANCIERO CRITICO", color: "text-red-500", icon: <Skull size={18} />, desc: "Supera el Costo Maximo Permitido (CMP)." };
+    if (esBajoCosto && esAltoMargen) return { label: "ACTIVO DE ALTA RENTABILIDAD", color: "text-cyan-400", icon: <TrendingUp size={18} />, desc: "El rey del menu." };
+    if (esBajoCosto && !esAltoMargen) return { label: "PRODUCTO DE VOLUMEN / ANCLA", color: "text-emerald-400", icon: <Anchor size={18} />, desc: "Sostiene la operacion." };
+    return { label: "DESAFIO OPERATIVO", color: "text-yellow-500", icon: <Settings size={18} />, desc: "Requiere ingenieria de procesos." };
+  };
+
+  const clasificacion = getClasificacionNomada();
+
+  const getSemaforoStatus = () => {
+    if (params.target <= 0 || foodCostReal <= 0) return { label: "PENDIENTE", color: "text-zinc-500", icon: <Activity size={20} /> };
+    if (sobrepasoCMP) return { label: "TECHO SUPERADO", color: "text-red-600", icon: <XCircle size={20} /> };
+    if (desviacion <= 0) return { label: "ZONA OPTIMA", color: "text-[#22c55e]", icon: <CheckCircle2 size={20} /> };
+    if (desviacion <= 5) return { label: "ZONA DE RIESGO", color: "text-yellow-500", icon: <AlertTriangle size={20} /> };
+    return { label: "ZONA CRITICA", color: "text-red-500", icon: <AlertTriangle size={20} /> };
+  };
+
+  const semaforo = getSemaforoStatus();
+
+  const agregarFila = () => setIngredientes([...ingredientes, crearIngrediente()]);
+  const eliminarFila = (id) => ingredientes.length > 1 && setIngredientes(ingredientes.filter(i => i.id !== id));
+  const updateIng = (id, field, val) => setIngredientes(ingredientes.map(i => i.id === id ? { ...i, [field]: val } : i));
+  const cambiarTipoIngrediente = (id, tipo) => setIngredientes(
+    ingredientes.map((i) => i.id === id
+      ? {
+          ...i,
+          tipo,
+          nombre: tipo === "insumo" ? i.nombre : "",
+          unidad: tipo === "insumo" ? i.unidad : "UN",
+          precio: tipo === "insumo" ? i.precio : "",
+          subRecetaId: tipo === "subreceta" ? i.subRecetaId : ""
+        }
+      : i)
+  );
+
+  const agregarSubReceta = () => setSubRecetas([
+    ...subRecetas,
+    {
       id: Date.now(),
-      ...form,
-      monto: form.tipo === 'venta' ? parseFloat(form.monto) || 0 : 0,
-      fecha: new Date().toLocaleString(),
+      nombre: "",
+      rendimiento: "",
+      ingredientes: [{ id: Date.now() + 1, nombre: "", unidad: "GR", cant: "", precio: "" }]
     }
+  ]);
+  const eliminarSubReceta = (id) => subRecetas.length > 1 && setSubRecetas(subRecetas.filter((s) => s.id !== id));
+  const updateSubReceta = (id, field, value) => setSubRecetas(subRecetas.map((s) => s.id === id ? { ...s, [field]: value } : s));
+  const agregarIngSubReceta = (subId) => setSubRecetas(
+    subRecetas.map((s) => s.id === subId
+      ? { ...s, ingredientes: [...s.ingredientes, { id: Date.now(), nombre: "", unidad: "GR", cant: "", precio: "" }] }
+      : s)
+  );
+  const eliminarIngSubReceta = (subId, ingId) => setSubRecetas(
+    subRecetas.map((s) => {
+      if (s.id !== subId || s.ingredientes.length <= 1) return s;
+      return { ...s, ingredientes: s.ingredientes.filter((i) => i.id !== ingId) };
+    })
+  );
+  const updateIngSubReceta = (subId, ingId, field, value) => setSubRecetas(
+    subRecetas.map((s) => {
+      if (s.id !== subId) return s;
+      return {
+        ...s,
+        ingredientes: s.ingredientes.map((i) => i.id === ingId ? { ...i, [field]: value } : i)
+      };
+    })
+  );
 
-    setPosts((prev) => [nuevoPost, ...prev])
-    setForm({ nombre: '', negocio: '', tipo: 'venta', titulo: '', detalle: '', monto: '', contacto: '' })
-    setError('')
-  }
-
-  const handleDelete = (id) => {
-    setPosts((prev) => prev.filter((post) => post.id !== id))
-  }
-
-  return (
-    <div className="app-container">
-      <header className="hero">
-        <div>
-          <span className="label">Vendedores de comida</span>
-          <h1>Registra ventas, inventarios y recetas</h1>
-          <p>
-            Software ligero para pequeños puestos y cocineros ambulantes. Lleva el control de tus ventas, organiza tu stock y guarda recetas estandarizadas con facilidad.
+  const renderCloudActions = (title, mode) => (
+    <section className="no-print">
+      <div className="glass-master rounded-[24px] p-5 border border-white/10">
+        <div className="flex flex-col gap-4">
+          <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">
+            {title}
           </p>
-        </div>
-        <div className="hero-stats">
-          <article className="stat-card">
-            <span>Ventas registradas</span>
-            <strong>{totalByType.venta}</strong>
-          </article>
-          <article className="stat-card">
-            <span>Movimientos inventario</span>
-            <strong>{totalByType.inventario}</strong>
-          </article>
-          <article className="stat-card">
-            <span>Recetas guardadas</span>
-            <strong>{totalByType.receta}</strong>
-          </article>
-          <article className="stat-card">
-            <span>Total ventas</span>
-            <strong>${totalVentas.toFixed(2)}</strong>
-          </article>
-        </div>
-      </header>
-
-      <section className="content">
-        <div className="form-card">
-          <h2>Nuevo registro</h2>
-          <form onSubmit={handleSubmit}>
-            <label>
-              Nombre del vendedor
-              <input
-                type="text"
-                name="nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                placeholder="Tu nombre" />
-            </label>
-
-            <label>
-              Nombre del negocio
-              <input
-                type="text"
-                name="negocio"
-                value={form.negocio}
-                onChange={handleChange}
-                placeholder="Ej: Tacos La Esquina" />
-            </label>
-
-            <label>
-              Tipo de registro
-              <select name="tipo" value={form.tipo} onChange={handleChange}>
-                {tipoOpciones.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+          {mode === "receta" && (
+            <div className="max-w-xl">
+              <select
+                className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
+                value={selectedRecetaId}
+                onChange={(e) => setSelectedRecetaId(e.target.value)}
+              >
+                <option value="">Seleccionar receta completa...</option>
+                {getRowsByMode("receta").map((receta) => (
+                  <option key={receta.id} value={receta.id}>{receta.nombre}</option>
                 ))}
               </select>
-            </label>
-
-            <label>
-              Título
-              <input
-                type="text"
-                name="titulo"
-                value={form.titulo}
-                onChange={handleChange}
-                placeholder="Ej: Venta de hoy / Stock de tortillas" />
-            </label>
-
-            <label>
-              {tipoLabel[form.tipo]}
-              <textarea
-                name="detalle"
-                value={form.detalle}
-                onChange={handleChange}
-                placeholder={tipoPlaceholder[form.tipo]}
-                rows="5" />
-            </label>
-
-            {form.tipo === 'venta' && (
-              <label>
-                Monto de la venta
-                <input
-                  type="number"
-                  name="monto"
-                  value={form.monto}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej: 1250.00" />
-              </label>
-            )}
-
-            <label>
-              Contacto (opcional)
-              <input
-                type="text"
-                name="contacto"
-                value={form.contacto}
-                onChange={handleChange}
-                placeholder="Teléfono, WhatsApp o dirección" />
-            </label>
-
-            {error && <p className="error">{error}</p>}
-            <button type="submit">Guardar registro</button>
-          </form>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => saveRecetaCloud(mode)}
+              disabled={cloudSaving}
+              className="bg-cyan-500 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-cyan-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save size={14} /> {
+                cloudSaving
+                  ? (mode === "subrecetas" ? "Guardando subrecetas..." : "Guardando receta completa...")
+                  : (mode === "subrecetas" ? "Guardar subrecetas" : "Guardar receta completa")
+              }
+            </button>
+            <button
+              onClick={() => loadSelectedRecetaCloud(mode)}
+              className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all"
+            >
+              <Database size={14} /> Cargar
+            </button>
+            <button
+              onClick={() => deleteSelectedRecetaCloud(mode)}
+              className="bg-red-500/15 border border-red-500/30 text-red-300 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-red-500/25 transition-all"
+            >
+              <Trash2 size={14} /> Eliminar
+            </button>
+            <button
+              onClick={crearNuevaReceta}
+              className="bg-amber-300 text-black px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-amber-200 transition-all"
+            >
+              <Plus size={14} /> Nueva
+            </button>
+            <button
+              onClick={loadRecetasCloud}
+              disabled={cloudLoading}
+              className="bg-white/5 border border-white/10 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-white/10 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Activity size={14} /> {cloudLoading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
         </div>
 
-        <div className="posts-card">
-          <div className="posts-header">
+        {cloudMessage && (
+          <p className="mt-3 text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{cloudMessage}</p>
+        )}
+      </div>
+    </section>
+  );
+
+  const exportarPDF = () => window.print();
+
+  // --- INTERFAZ DE LOGIN ---
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6">
+        <p className="text-zinc-400 text-xs uppercase tracking-[0.25em] font-black">Validando sesion...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0b0b0c] flex items-center justify-center p-6 relative overflow-hidden font-['Plus_Jakarta_Sans']">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-amber-300/10 blur-[120px]" />
+          <div className="absolute -bottom-24 -right-20 w-[420px] h-[420px] rounded-full bg-zinc-400/10 blur-[120px]" />
+          <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-[980px] grid grid-cols-1 lg:grid-cols-2 rounded-[40px] overflow-hidden border border-white/10 shadow-[0_40px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl bg-black/45">
+          <section className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-b from-white/[0.07] to-transparent">
             <div>
-              <h2>Registros recientes</h2>
-              <div className="summary-row">
-                <span>Total: {posts.length}</span>
-                <span>Ventas: {totalByType.venta}</span>
-                <span>Inventario: {totalByType.inventario}</span>
-                <span>Recetas: {totalByType.receta}</span>
-                <span>Total ventas: ${totalVentas.toFixed(2)}</span>
+              <div className="mb-5 flex justify-start">
+                {logoSourceIndex < LOGIN_LOGO_SOURCES.length ? (
+                  <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-3">
+                    <img
+                      src={LOGIN_LOGO_SOURCES[logoSourceIndex]}
+                      alt="Logo Nómada"
+                      className="w-44 sm:w-52 h-auto object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
+                      onError={() => setLogoSourceIndex((prev) => prev + 1)}
+                    />
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-3 bg-white/[0.03] border border-white/15 rounded-2xl px-4 py-3">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" className="text-zinc-100">
+                      <path d="M4 20L20 4M4 4L20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 1.5V4M12 20V22.5M1.5 12H4M20 12H22.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                    <div className="text-left leading-tight">
+                      <p className="text-[10px] text-zinc-200 font-black uppercase tracking-[0.25em]">Nomada</p>
+                      <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-[0.18em]">Consultorias Gastronomicas</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <h2 className="mt-4 text-5xl leading-[0.95] font-black italic tracking-tight text-white">
+                Nómada<span className="text-amber-300">Elite</span>
+              </h2>
+              <p className="mt-5 text-zinc-400 text-sm leading-relaxed max-w-[34ch]">
+                Centro de mando para ingenieria de costos, pricing y rentabilidad gastronomica.
+              </p>
+            </div>
+            <p className="text-red-400/90 text-[11px] uppercase tracking-[0.2em] font-black italic">
+              "{typewriterText}"
+              <span className="animate-pulse border-r border-red-500 ml-1" />
+            </p>
+          </section>
+
+          <section className="p-8 sm:p-12">
+            <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-6">
+              <div className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+              <span className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.22em]">Elite Access</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase mb-2">
+              Ingreso Seguro
+            </h1>
+            <p className="text-zinc-500 text-xs uppercase tracking-[0.25em] mb-8">
+              Sistema de Ingenieria Maestra
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "login"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Ingresar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setLoginError("");
+                  setAuthNotice("");
+                }}
+                className={`h-11 rounded-2xl border text-[10px] font-black uppercase tracking-[0.22em] transition-all ${
+                  authMode === "register"
+                    ? "bg-amber-300 text-black border-amber-300"
+                    : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white"
+                }`}
+              >
+                Crear Acceso
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="relative group text-left">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type="email"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Correo de Acceso"
+                  value={credentials.email}
+                  onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                />
+              </div>
+
+              <div className="relative group text-left">
+                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-amber-300 transition-colors" size={17} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/[0.04] border border-white/10 text-white font-bold outline-none focus:border-amber-300/70 focus:bg-amber-300/[0.04] transition-all"
+                  placeholder="Contrasena"
+                  value={credentials.pass}
+                  onChange={(e) => setCredentials({ ...credentials, pass: e.target.value })}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
+              {loginError && (
+                <p className="text-red-400 text-[10px] font-black uppercase text-center tracking-[0.25em] animate-pulse pt-1">
+                  {loginError}
+                </p>
+              )}
+              {authNotice && (
+                <div className="rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4 text-left">
+                  <p className="text-emerald-200 text-[10px] font-black uppercase tracking-[0.24em]">
+                    Revision de correo requerida
+                  </p>
+                  <p className="mt-2 text-emerald-100 text-xs font-bold leading-relaxed">
+                    {authNotice}
+                  </p>
+                  <p className="mt-2 text-emerald-200/80 text-[10px] uppercase tracking-[0.16em]">
+                    Revisa bandeja principal, spam o promociones.
+                  </p>
+                </div>
+              )}
+
+              <button
+                disabled={isSubmittingAuth}
+                className="w-full h-14 rounded-2xl bg-gradient-to-r from-amber-300 to-amber-500 text-black font-black uppercase tracking-[0.25em] text-[11px] flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(251,191,36,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmittingAuth ? "Procesando..." : authMode === "login" ? "Ingresar" : "Crear Acceso"}
+                <ArrowRight size={16} />
+              </button>
+            </form>
+
+            {authMode === "register" && (
+              <button
+                type="button"
+                onClick={handleRegister}
+                disabled={isSubmittingAuth}
+                className="w-full mt-4 h-12 rounded-2xl border border-amber-300/30 bg-amber-300/10 text-amber-200 font-black uppercase tracking-[0.22em] text-[10px] hover:bg-amber-300/15 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                Registrar Nuevo Usuario
+              </button>
+            )}
+
+            <div className="lg:hidden mt-8 min-h-[20px]">
+              <p className="text-red-400/90 text-[10px] font-black uppercase tracking-[0.18em] italic">
+                "{typewriterText}"
+                <span className="animate-pulse border-r border-red-500 ml-1" />
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+  // --- PANEL PRINCIPAL (VERSION v9.42 BASE) ---
+  return (
+    <div className={`min-h-screen text-white p-6 lg:p-10 selection:bg-cyan-500/30 relative overflow-hidden ${theme === "light" ? "theme-light bg-[#eef2f7]" : "theme-dark bg-[#050505]"}`}>
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-20 no-print"
+        style={{
+          backgroundImage: theme === "light"
+            ? `url("https://www.transparenttextures.com/patterns/diamond-upholstery.png"), radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%)`
+            : `url("https://www.transparenttextures.com/patterns/carbon-fibre.png"), radial-gradient(circle at 50% 50%, #111 0%, #050505 100%)`,
+          transform: `translateY(${offset * 0.2}px)`,
+          zIndex: 0
+        }}
+      />
+      
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=JetBrains+Mono:wght@700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; }
+        .glass-master { background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.05); }
+        .neon-border-cian { border-left: 4px solid #06b6d4; }
+        .neon-border-magenta { border-left: 4px solid #d946ef; }
+        .neon-border-verde { border-left: 4px solid #22c55e; }
+        .input-tech { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: white; transition: all 0.3s; }
+        .input-tech:focus { background: rgba(6, 182, 212, 0.08); border-color: #06b6d4; outline: none; }
+        .input-tech option { color: #111111; background: #ffffff; }
+        .label-yellow { color: #facc15; font-weight: 800; font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; text-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .pdf-executive-header { display: none; }
+
+        .theme-light { color: #0f172a; }
+        .theme-light .glass-master { background: rgba(255, 255, 255, 0.86); border: 1px solid rgba(15, 23, 42, 0.12); box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08); }
+        .theme-light .input-tech { background: rgba(15, 23, 42, 0.04); border: 1px solid rgba(15, 23, 42, 0.15); color: #0f172a; }
+        .theme-light .input-tech:focus { background: rgba(6, 182, 212, 0.08); border-color: #0891b2; }
+        .theme-light .text-white { color: #0f172a !important; }
+        .theme-light .text-zinc-400, .theme-light .text-zinc-500, .theme-light .text-zinc-600 { color: #475569 !important; }
+        .theme-light .border-white/5 { border-color: rgba(15, 23, 42, 0.1) !important; }
+        .theme-light .border-white/10 { border-color: rgba(15, 23, 42, 0.16) !important; }
+        .theme-light .bg-[#0a0a0a] { background: #f8fafc !important; }
+        .theme-light .text-zinc-800 { color: #1e293b !important; }
+        
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; padding: 0 !important; }
+          .glass-master { background: white !important; border: 1px solid #000 !important; color: black !important; backdrop-filter: none !important; box-shadow: none !important; border-radius: 10px !important; margin-bottom: 20px; }
+          .label-yellow { color: #000000 !important; text-shadow: none !important; font-size: 10px !important; font-weight: 900 !important; border-bottom: 1px solid black !important; }
+          input, select { background: transparent !important; color: #000000 !important; border: none !important; font-weight: 900 !important; opacity: 1 !important; }
+          .text-white, .text-[#06b6d4], .text-[#d946ef], .text-[#22c55e], .mono, .text-7xl { color: #000000 !important; text-shadow: none !important; }
+          .neon-border-cian, .neon-border-magenta, .neon-border-verde { border-left: 5px solid black !important; }
+          .pdf-executive-header { display: block !important; border: 2px solid #000; padding: 16px; border-radius: 10px; margin-bottom: 14px; }
+          .pdf-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+          .pdf-kpi { border: 1px solid #000; padding: 6px; border-radius: 6px; }
+          .footer-pdf { display: block !important; position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 10px; color: #000 !important; font-weight: 800; border-top: 2px solid black; padding-top: 10px; }
+        }
+        .footer-pdf { display: none; }
+      `}</style>
+
+      <div className="relative z-10">
+        <header className="max-w-[1600px] mx-auto mb-12 flex justify-between items-center border-b border-white/10 pb-10 no-print">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <Zap size={24} className="text-[#06b6d4] fill-[#06b6d4]" />
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none">
+                Nómada<span className="text-[#06b6d4]">Elite</span>
+              </h1>
+            </div>
+            <p className="text-[10px] font-black tracking-[0.6em] text-zinc-600 uppercase italic">“No optimizamos cocinas… construimos imperios gastronómicos rentables.”</p>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="bg-white/5 border border-white/10 text-white px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-white/10 transition-all"
+            >
+              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+              {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
+            </button>
+            <button onClick={exportarPDF} className="bg-white text-black px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#06b6d4] hover:text-white transition-all shadow-lg">
+              <FileDown size={14} /> Exportar Reporte PDF
+            </button>
+            <button onClick={handleLogout} className="bg-white/5 border border-white/10 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/20 transition-all">
+              <Unlock size={14} /> Bloquear
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-[1600px] mx-auto space-y-12">
+          <div className="pdf-executive-header">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+              <div>
+                <p style={{ fontWeight: 900, letterSpacing: "0.2em", fontSize: "10px", textTransform: "uppercase" }}>NOMADA CONSULTORIAS GASTRONOMICAS</p>
+                <p style={{ fontWeight: 800, fontSize: "9px", marginTop: "4px" }}>Reporte Ejecutivo de Ingenieria de Menu</p>
+              </div>
+              <div style={{ textAlign: "right", fontSize: "9px", fontWeight: 800 }}>
+                <p>Fecha: {new Date().toLocaleDateString()}</p>
+                <p>Receta: {nombreReceta || "SIN NOMBRE"}</p>
               </div>
             </div>
-            <div className="posts-controls">
-              <label>
-                Filtrar por tipo
-                <select value={filtroTipo} onChange={(event) => setFiltroTipo(event.target.value)}>
-                  <option value="todos">Todos</option>
-                  {tipoOpciones.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="button" className="csv-button" onClick={() => {
-                const headers = ['Fecha', 'Tipo', 'Negocio', 'Vendedor', 'Título', 'Detalle', 'Contacto', 'Monto']
-                const rows = filteredPosts.map((post) => [
-                  post.fecha,
-                  tipoOpciones.find((option) => option.value === post.tipo)?.label || post.tipo,
-                  post.negocio,
-                  post.nombre,
-                  post.titulo,
-                  post.detalle,
-                  post.contacto || '',
-                  post.tipo === 'venta' ? Number(post.monto || 0).toFixed(2) : '',
-                ])
-                const csv = [headers, ...rows]
-                  .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-                  .join('\n')
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                const url = URL.createObjectURL(blob)
-                const link = document.createElement('a')
-                link.href = url
-                link.download = 'registros_comida.csv'
-                link.click()
-                URL.revokeObjectURL(url)
-              }}>
-                Exportar CSV
-              </button>
+            <div className="pdf-kpis">
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Costo x Porcion</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>${Math.round(costoPorcion).toLocaleString()}</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Precio Sugerido</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>${precioFinalRedondeado.toLocaleString()}</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Food Cost Real</p>
+                <p style={{ fontSize: "16px", fontWeight: 900 }}>{foodCostReal.toFixed(1)}%</p>
+              </div>
+              <div className="pdf-kpi">
+                <p style={{ fontSize: "8px", fontWeight: 800, textTransform: "uppercase" }}>Clasificacion</p>
+                <p style={{ fontSize: "12px", fontWeight: 900 }}>{clasificacion.label}</p>
+              </div>
             </div>
           </div>
 
-          {filteredPosts.length === 0 ? (
-            <p className="empty-state">No hay registros en este filtro. Cambia el tipo o añade un nuevo registro.</p>
-          ) : (
-            <div className="posts-grid">
-              {filteredPosts.map((post) => (
-                <article key={post.id} className="post-item">
-                  <div className="post-header">
-                    <div>
-                      <strong>{post.titulo}</strong>
-                      <p className="post-owner">{post.negocio} · Por {post.nombre}</p>
+          <section className="no-print">
+            <div className="glass-master rounded-[24px] p-3 inline-flex gap-3 border border-white/10">
+              <button
+                onClick={() => setActiveTab("receta")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "receta"
+                    ? "bg-[#06b6d4] text-black"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Receta Estandar
+              </button>
+              <button
+                onClick={() => setActiveTab("subrecetas")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "subrecetas"
+                    ? "bg-[#d946ef] text-white"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Banco Subrecetas
+              </button>
+              <button
+                onClick={() => setActiveTab("empresa")}
+                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all ${
+                  activeTab === "empresa"
+                    ? "bg-amber-300 text-black"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                }`}
+              >
+                Empresa
+              </button>
+            </div>
+          </section>
+
+          {activeTab === "subrecetas" && (
+            <section className="no-print">
+              <div className="glass-master rounded-[24px] p-5 border border-white/10">
+                <div className="flex flex-col xl:flex-row xl:items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black mb-2">Banco de subrecetas en la nube</p>
+                    <select
+                      className="input-tech w-full p-4 rounded-xl text-sm font-black uppercase bg-[#0a0a0a]"
+                      value={selectedSubrecetaId}
+                      onChange={(e) => setSelectedSubrecetaId(e.target.value)}
+                    >
+                      <option value="">Seleccionar banco...</option>
+                      {getRowsByMode("subrecetas").map((receta) => (
+                        <option key={receta.id} value={receta.id}>{receta.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+          
+          {/* IDENTIFICADOR, COSTO MÁXIMO Y AUDITORÍA */}
+                    {activeTab === "receta" && (
+            <section className="glass-master border border-white/10 rounded-[24px] p-5 no-print">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Subrecetas Disponibles</p>
+                    <p className="text-xl font-black text-white mono">{subrecetasDisponibles}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Subrecetas en Uso</p>
+                    <p className="text-xl font-black text-[#22c55e] mono">{subrecetasEnUso}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-black">Filas sin Asignar</p>
+                    <p className={`text-xl font-black mono ${subrecetasSinAsignar > 0 ? "text-yellow-500" : "text-zinc-400"}`}>{subrecetasSinAsignar}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("subrecetas")}
+                  className="bg-[#d946ef]/20 border border-[#d946ef]/40 text-[#f0abfc] px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] hover:bg-[#d946ef]/30 transition-all"
+                >
+                  Ir al Banco
+                </button>
+              </div>
+            </section>
+          )}
+{activeTab === "receta" && (
+            <>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <section className="glass-master neon-border-cian p-10 rounded-[35px] lg:col-span-8 print:p-6 print:lg:col-span-12">
+              <span className="text-[#06b6d4] text-[10px] font-black uppercase tracking-[0.5em] mb-4 block italic flex items-center gap-2 no-print">
+                <Target size={14} /> Nombre de la receta
+              </span>
+              <input 
+                className="w-full bg-transparent text-3xl md:text-4xl font-black text-white outline-none tracking-tight placeholder:text-zinc-700 uppercase italic print:text-3xl"
+                placeholder="Nombre de la receta"
+                value={nombreReceta}
+                onChange={(e) => setNombreReceta(e.target.value)}
+              />
+            </section>
+
+            <section className={`glass-master p-8 rounded-[35px] lg:col-span-2 flex flex-col justify-center items-center text-center no-print border-white/5 transition-all ${sobrepasoCMP ? 'border-red-500/50 bg-red-500/5' : ''}`}>
+              <span className="label-yellow text-[9px] mb-2">CMP (Costo Máx)</span>
+              <input 
+                type="number"
+                className={`bg-transparent text-3xl font-black mono text-center outline-none w-full ${sobrepasoCMP ? 'text-red-500' : 'text-white'}`}
+                placeholder="0"
+                value={costoMaximo}
+                onChange={(e) => setCostoMaximo(e.target.value)}
+              />
+              <p className="text-[8px] text-zinc-500 mt-2 uppercase tracking-tighter">Techo Financiero</p>
+            </section>
+
+            <section className={`glass-master lg:col-span-2 p-8 rounded-[35px] flex flex-col justify-center items-center text-center no-print border-white/5`}>
+              <div className={`${semaforo.color} mb-2 animate-pulse`}>
+                {semaforo.icon}
+              </div>
+              <span className={`text-[9px] font-black tracking-[0.2em] uppercase mb-1 ${semaforo.color}`}>Auditoría:</span>
+              <h3 className={`text-xl font-black italic uppercase ${semaforo.color}`}>
+                {semaforo.label}
+              </h3>
+              <p className="text-[8px] font-bold text-zinc-500 mt-1 uppercase">Real: {foodCostReal.toFixed(1)}%</p>
+            </section>
+          </div>
+
+          {/* CLASIFICACIÓN DE INGENIERÍA NÓMADA */}
+          <section className={`glass-master border-t-2 ${clasificacion.color.replace('text', 'border')} p-6 rounded-[30px] flex items-center gap-6 no-print`}>
+            <div className={`p-4 rounded-2xl bg-white/5 ${clasificacion.color}`}>
+              {clasificacion.icon}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Clasificación Nómada</p>
+              <h4 className={`text-2xl font-black italic uppercase ${clasificacion.color}`}>{clasificacion.label}</h4>
+              <p className="text-xs text-zinc-400 font-medium italic">"{clasificacion.desc}"</p>
+            </div>
+          </section>
+
+            </>
+          )}
+
+          {/* BANCO DE SUBRECETAS */}
+          {activeTab === "subrecetas" && (
+            <>
+              <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl no-print">
+                <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4">
+                  <Database size={18} className="text-[#d946ef]" />
+                  <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Banco de Subrecetas</h2>
+                </div>
+                <div className="p-8 space-y-8">
+                  {resumenSubRecetas.map((sub) => (
+                    <div key={sub.id} className="border border-white/10 rounded-3xl p-5 bg-white/[0.015]">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-5 items-end">
+                    <div className="lg:col-span-5">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Nombre de subreceta</label>
+                      <input
+                        className="input-tech w-full h-12 px-4 rounded-xl font-black uppercase"
+                        placeholder="Ej: Salsa madre"
+                        value={sub.nombre}
+                        onChange={(e) => updateSubReceta(sub.id, "nombre", e.target.value)}
+                      />
                     </div>
-                    <div className="post-meta">
-                      <span className={`post-type post-type-${post.tipo}`}>
-                        {tipoOpciones.find((option) => option.value === post.tipo)?.label || 'Registro'}
-                      </span>
-                      <span>{post.fecha}</span>
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Rendimiento (unidades)</label>
+                      <input
+                        type="number"
+                        className="input-tech w-full h-12 px-4 rounded-xl text-center font-black mono text-[#06b6d4]"
+                        value={sub.rendimiento}
+                        onChange={(e) => updateSubReceta(sub.id, "rendimiento", e.target.value)}
+                      />
+                    </div>
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Costo total</label>
+                      <div className="input-tech w-full h-12 px-4 rounded-xl text-right font-black mono text-white flex items-center justify-end">
+                        ${Math.round(sub.costoTotal).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="lg:col-span-2">
+                      <label className="label-yellow text-[9px] block min-h-[26px]">Costo unitario</label>
+                      <div className="input-tech w-full h-12 px-4 rounded-xl text-right font-black mono text-[#22c55e] flex items-center justify-end">
+                        ${Math.round(sub.costoUnitario).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="lg:col-span-1 flex lg:justify-end">
+                      <button onClick={() => eliminarSubReceta(sub.id)} className="h-12 w-12 inline-flex items-center justify-center text-zinc-500 hover:text-[#d946ef] transition-all rounded-xl border border-white/10 bg-white/5">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </div>
-                  <p className="post-detail">{post.detalle || post.mensaje}</p>
-                  {post.tipo === 'venta' && post.monto != null && (
-                    <p className="post-amount">Monto: ${Number(post.monto || 0).toFixed(2)}</p>
-                  )}
-                  {post.contacto && <p className="post-contacto">Contacto: {post.contacto}</p>}
-                  <button className="delete-button" onClick={() => handleDelete(post.id)}>
-                    Eliminar
+
+                  <div className="grid grid-cols-12 gap-3 mb-3 px-1">
+                    <div className="col-span-4 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">Nombre del insumo</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-center">Unidad</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-center">Cantidad</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-right">Precio unitario</div>
+                    <div className="col-span-2 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 text-right">Subtotal</div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {sub.ingredientes.map((ing) => (
+                      <div key={ing.id} className="grid grid-cols-12 gap-3 items-center">
+                        <div className="col-span-4 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Nombre del insumo</label>
+                          <input className="input-tech w-full p-3 rounded-xl text-sm font-bold" placeholder="Insumo..." value={ing.nombre} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "nombre", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Unidad</label>
+                          <select className="input-tech w-full p-3 rounded-xl text-center text-xs font-black uppercase bg-[#0a0a0a]" value={ing.unidad} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "unidad", e.target.value)}>
+                            <option value="GR">GR</option><option value="ML">ML</option><option value="UN">UN</option><option value="KG">KG</option><option value="LT">LT</option>
+                          </select>
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Cantidad</label>
+                          <input type="number" className="input-tech w-full p-3 rounded-xl text-center font-black mono text-[#06b6d4]" value={ing.cant} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "cant", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500">Precio unitario</label>
+                          <input type="number" className="input-tech w-full p-3 rounded-xl text-right font-black mono" value={ing.precio} onChange={(e) => updateIngSubReceta(sub.id, ing.id, "precio", e.target.value)} />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-500 text-right block">Subtotal</label>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 text-right text-sm font-black mono text-[#22c55e]">
+                              ${(Number(ing.cant) * Number(ing.precio)).toLocaleString()}
+                            </div>
+                            <button onClick={() => eliminarIngSubReceta(sub.id, ing.id)} className="p-2 text-zinc-700 hover:text-[#d946ef] transition-all">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                      <button onClick={() => agregarIngSubReceta(sub.id)} className="w-full mt-5 py-3 border border-dashed border-[#d946ef]/25 rounded-2xl text-[9px] font-black uppercase tracking-[0.3em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-3">
+                        <Plus size={14} /> Agregar insumo a subreceta
+                      </button>
+                    </div>
+                  ))}
+
+                  <button onClick={agregarSubReceta} className="w-full py-5 border border-dashed border-[#d946ef]/30 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-[#d946ef]/60 hover:text-[#d946ef] hover:bg-[#d946ef]/5 transition-all flex items-center justify-center gap-4">
+                    <Plus size={16} /> Crear subreceta
                   </button>
-                </article>
+                </div>
+              </section>
+
+              {renderCloudActions("Acciones de receta y subrecetas", "subrecetas")}
+            </>
+          )}
+
+          {/* INFORMACION DE LA EMPRESA */}
+          {activeTab === "empresa" && (
+            <>
+              <section className="glass-master border border-amber-300/35 rounded-[34px] p-8 md:p-10 no-print overflow-hidden relative">
+                <div className="absolute -top-24 -right-20 w-72 h-72 rounded-full bg-amber-300/15 blur-[90px] pointer-events-none" />
+                <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-cyan-400/10 blur-[100px] pointer-events-none" />
+
+                <div className="relative z-10 flex items-center gap-3 mb-4">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">NOMADA CONSULTORIAS GASTRONOMICAS</p>
+                </div>
+
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div className="lg:col-span-8">
+                    <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tight text-white leading-[0.95]">
+                      Consultoría que convierte cocinas en negocios rentables
+                    </h2>
+                    <p className="mt-5 text-sm md:text-base text-zinc-300 leading-relaxed max-w-4xl">
+                      Más de 10 años elevando operaciones gastronómicas con control de costos, estándares de calidad y ejecución comercial.
+                      Integramos estrategia, tecnología y acompañamiento operativo para que cada decisión impacte la utilidad.
+                    </p>
+                    <p className="mt-3 text-sm md:text-base text-zinc-400 leading-relaxed max-w-4xl">
+                      Equipo con auditores en ISO 22000:2018 y experiencia en restaurantes, hoteles, proyectos rurales y clubes campestres.
+                    </p>
+                  </div>
+
+                  <div className="lg:col-span-4 grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Años", value: "10+" },
+                      { label: "Sectores", value: "7+" },
+                      { label: "Auditoría", value: "ISO 22000" },
+                      { label: "Cobertura", value: "Nacional" }
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xl md:text-2xl font-black text-cyan-300">{item.value}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-400 mt-1">{item.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section className="glass-master border border-cyan-400/30 rounded-[28px] p-8 no-print">
+                <div className="max-w-4xl">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-400">Herramienta de Gestión</p>
+                  <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">NOMADA PRESUPUESTOS GASTRONOMICOS</h3>
+                  <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
+                    Plataforma para estandarizar recetas, controlar food cost y definir precios técnicos de venta con reportes ejecutivos.
+                  </p>
+                </div>
+              </section>
+
+              <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 no-print">
+                {[
+                  {
+                    title: "Coaching Empresarial",
+                    desc: "Acompañamiento estratégico para gerencia, jefes de cocina y equipos de sala con metas medibles.",
+                    color: "text-cyan-400"
+                  },
+                  {
+                    title: "Diseño y Estandarización de Carta",
+                    desc: "Ingeniería de menú, fichas técnicas, porcionado y manuales de producción para consistencia.",
+                    color: "text-[#22c55e]"
+                  },
+                  {
+                    title: "Costos y Presupuestos",
+                    desc: "Modelos de costos, proyecciones mensuales, punto de equilibrio y control presupuestal.",
+                    color: "text-yellow-400"
+                  },
+                  {
+                    title: "Auditorías BPM y Seguridad Alimentaria",
+                    desc: "Evaluación técnica de cumplimiento, planes de acción y seguimiento de inocuidad.",
+                    color: "text-[#d946ef]"
+                  },
+                  {
+                    title: "Implementación ISO 22000:2018",
+                    desc: "Diagnóstico, documentación, capacitación y acompañamiento para certificación o recertificación.",
+                    color: "text-amber-300"
+                  },
+                  {
+                    title: "Capacitación In Company",
+                    desc: "Programas prácticos de cocina, servicio y costos para acelerar curva de aprendizaje del personal.",
+                    color: "text-cyan-300"
+                  },
+                  {
+                    title: "Talleres de Cocina Privados",
+                    desc: "Experiencias para equipos o grupos privados con enfoque técnico y gastronómico.",
+                    color: "text-lime-300"
+                  },
+                  {
+                    title: "Apertura y Reestructuración",
+                    desc: "Diseño de procesos de arranque, ajuste de organigrama y estabilización operativa.",
+                    color: "text-rose-300"
+                  },
+                  {
+                    title: "Compras y Control de Proveedores",
+                    desc: "Estándares de compra, negociación y evaluación de rendimiento de proveedores críticos.",
+                    color: "text-indigo-300"
+                  }
+                ].map((service) => (
+                  <article key={service.title} className="glass-master rounded-[24px] p-6 border border-white/10">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${service.color}`}>Servicio</p>
+                    <h3 className="mt-3 text-xl font-black uppercase italic text-white">{service.title}</h3>
+                    <p className="mt-3 text-sm text-zinc-400 leading-relaxed">{service.desc}</p>
+                  </article>
+                ))}
+              </section>
+
+              <section className="glass-master rounded-[28px] border border-white/10 p-8 no-print">
+                <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-300">Clientes y Proyectos</p>
+                    <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Empresas que han confiado en Nómada</h3>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[
+                    { name: "La Cabaña", file: "/branding/clientes/la-cabana.png" },
+                    { name: "Old Ranch", file: "/branding/clientes/old-ranch.png" },
+                    { name: "Mujer Tejer y Saberes", file: "/branding/clientes/mujer-tejer-y-saberes.png" },
+                    { name: "Alma Rural", file: "/branding/clientes/alma-rural.png" },
+                    { name: "ALETA", file: "/branding/clientes/af.png" },
+                    { name: "Despertar de las Aves", file: "/branding/clientes/despertar-de-las-aves.png" },
+                    { name: "El Monte", file: "/branding/clientes/el-monte.png" },
+                    { name: "Anamichu Suites", file: "/branding/clientes/anamichu-suites.png" }
+                  ].map((client) => (
+                    <div key={client.name} className="rounded-2xl border border-white/10 bg-black/25 p-4 flex flex-col items-center justify-center min-h-[150px]">
+                      <img
+                        src={client.file}
+                        alt={client.name}
+                        className="max-h-[78px] w-auto object-contain mb-3"
+                        onError={(e) => {
+                          e.currentTarget.src = "/branding/nomada-logo-white.svg";
+                          e.currentTarget.classList.add("opacity-35");
+                        }}
+                      />
+                      <p className="text-center text-[10px] font-black uppercase tracking-[0.18em] text-zinc-300">{client.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="glass-master rounded-[28px] border border-white/10 p-8 no-print">
+                <div className="mb-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-cyan-300">Reel de Proyectos</p>
+                  <h3 className="mt-2 text-2xl md:text-3xl font-black uppercase italic text-white">Casos destacados de Nómada</h3>
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+                  {[
+                    {
+                      title: "Proyecto 01",
+                      files: ["/branding/proyecto/proyecto-01.jpg", "/branding/proyecto/proyecto-01.jpeg", "/branding/proyectos/proyecto-01.jpg"]
+                    },
+                    {
+                      title: "Proyecto 02",
+                      files: ["/branding/proyecto/proyecto-02.jpg", "/branding/proyecto/proyecto-02.jpeg", "/branding/proyectos/proyecto-02.jpg"]
+                    },
+                    {
+                      title: "Proyecto 03",
+                      files: ["/branding/proyecto/proyecto-03.jpg", "/branding/proyecto/proyecto-03.jpeg", "/branding/proyectos/proyecto-03.jpg"]
+                    },
+                    {
+                      title: "Proyecto 04",
+                      files: ["/branding/proyecto/proyecto-04.jpg", "/branding/proyecto/proyecto-04.jpg.jpeg", "/branding/proyecto/proyecto-04.jpeg", "/branding/proyectos/proyecto-04.jpg"]
+                    },
+                    {
+                      title: "Proyecto 05",
+                      files: ["/branding/proyecto/proyecto-05.jpg", "/branding/proyecto/proyecto-05.jpg.jpeg", "/branding/proyecto/proyecto-05.jpeg", "/branding/proyectos/proyecto-05.jpg"]
+                    }
+                  ].map((slide) => (
+                    <article key={slide.title} className="snap-start shrink-0 w-[280px] md:w-[340px] rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <img
+                        src={slide.files[0]}
+                        alt={slide.title}
+                        className="w-full h-[180px] object-cover rounded-xl"
+                        data-fallbacks={slide.files.join("|")}
+                        data-fallback-index="0"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          const fallbacks = (img.dataset.fallbacks || "").split("|").filter(Boolean);
+                          const currentIndex = Number(img.dataset.fallbackIndex || "0");
+                          const nextIndex = currentIndex + 1;
+                          if (nextIndex < fallbacks.length) {
+                            img.dataset.fallbackIndex = String(nextIndex);
+                            img.src = fallbacks[nextIndex];
+                            return;
+                          }
+                          img.src = "/branding/nomada-logo-white.svg";
+                          img.classList.add("opacity-35", "object-contain", "p-6", "bg-black/40");
+                        }}
+                      />
+                      <p className="mt-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300">{slide.title}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+
+          {activeTab === "receta" && (
+            <>
+          {/* ARQUITECTURA DE INSUMOS */}
+          <section className="glass-master rounded-[35px] overflow-hidden border border-white/5 shadow-2xl print:rounded-xl">
+            <div className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center gap-4 no-print">
+              <Calculator size={18} className="text-[#06b6d4]" />
+              <h2 className="text-xs font-black uppercase tracking-[0.4em] italic text-zinc-400">Desglose de Arquitectura</h2>
+            </div>
+            
+            <div className="p-8 print:p-4">
+              <div className="grid grid-cols-12 gap-4 mb-8 px-4 border-b border-white/5 pb-6 print:mb-4 print:pb-2">
+                <div className="col-span-4 label-yellow">Insumo Técnico</div>
+                <div className="col-span-2 label-yellow text-center">Und</div>
+                <div className="col-span-2 label-yellow text-center">Cant</div>
+                <div className="col-span-2 label-yellow text-right">V. Unit</div>
+                <div className="col-span-2 label-yellow text-right">V. Total</div>
+              </div>
+
+              <div className="space-y-4 print:space-y-2">
+                {ingredientes.map((ing) => (
+                  <div key={ing.id} className="grid grid-cols-12 gap-4 items-center group relative">
+                    <div className="col-span-4">
+                      <div className="grid grid-cols-12 gap-2">
+                        <select className="input-tech col-span-4 p-3 rounded-xl text-[10px] font-black uppercase bg-[#0a0a0a] no-print" value={ing.tipo} onChange={(e) => cambiarTipoIngrediente(ing.id, e.target.value)}>
+                          <option value="insumo">Insumo</option>
+                          <option value="subreceta">Subreceta</option>
+                        </select>
+                        {ing.tipo === "insumo" ? (
+                          <input className="input-tech col-span-8 w-full p-4 rounded-xl text-white font-bold text-lg print:p-0 print:text-sm" placeholder="Nombre..." value={ing.nombre} onChange={(e) => updateIng(ing.id, 'nombre', e.target.value)} />
+                        ) : (
+                          <select className="input-tech col-span-8 w-full p-4 rounded-xl text-white font-bold text-sm uppercase bg-[#0a0a0a]" value={ing.subRecetaId} onChange={(e) => updateIng(ing.id, "subRecetaId", e.target.value)}>
+                            <option value="">Seleccionar...</option>
+                            {resumenSubRecetas.map((s) => (
+                              <option key={s.id} value={s.id}>{s.nombre || `Subreceta ${s.id}`}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      {ing.tipo === "insumo" ? (
+                        <select className="input-tech w-full p-4 rounded-xl text-center text-xs font-black uppercase bg-[#0a0a0a] print:p-0" value={ing.unidad} onChange={(e) => updateIng(ing.id, 'unidad', e.target.value)}>
+                          <option value="GR">GR</option><option value="ML">ML</option><option value="UN">UN</option><option value="KG">KG</option><option value="LT">LT</option>
+                        </select>
+                      ) : (
+                        <div className="input-tech w-full p-4 rounded-xl text-center text-xs font-black uppercase">UN</div>
+                      )}
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" className="input-tech w-full p-4 rounded-xl text-center font-black text-xl text-[#06b6d4] mono print:p-0 print:text-sm" value={ing.cant} onChange={(e) => updateIng(ing.id, 'cant', e.target.value)} />
+                    </div>
+                    <div className="col-span-2">
+                      {ing.tipo === "insumo" ? (
+                        <input type="number" className="input-tech w-full p-4 rounded-xl text-right font-black text-xl text-white mono print:p-0 print:text-sm" value={ing.precio} onChange={(e) => updateIng(ing.id, 'precio', e.target.value)} />
+                      ) : (
+                        <div className="input-tech w-full p-4 rounded-xl text-right font-black text-xl text-white mono print:p-0 print:text-sm">
+                          ${Math.round(resumenSubRecetas.find((s) => String(s.id) === String(ing.subRecetaId))?.costoUnitario || 0).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="col-span-2 flex items-center gap-3">
+                      <div className="flex-1 text-right font-black text-xl text-[#22c55e] mono bg-[#22c55e]/5 p-4 rounded-xl border border-[#22c55e]/10 print:text-black print:p-0 print:border-none">
+                        ${(
+                          ing.tipo === "subreceta"
+                            ? Number(ing.cant) * Number(resumenSubRecetas.find((s) => String(s.id) === String(ing.subRecetaId))?.costoUnitario || 0)
+                            : Number(ing.cant) * Number(ing.precio)
+                        ).toLocaleString()}
+                      </div>
+                      <button onClick={() => eliminarFila(ing.id)} className="p-2 text-zinc-800 hover:text-[#d946ef] transition-all no-print"><Trash2 size={20} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <button onClick={agregarFila} className="w-full mt-10 py-6 border border-dashed border-[#06b6d4]/20 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] text-cyan-500/40 hover:text-[#06b6d4] hover:bg-cyan-500/5 transition-all flex items-center justify-center gap-4 no-print">
+                <Plus size={18} /> Inyectar Insumo
+              </button>
+            </div>
+          </section>
+
+          {/* ALGORITMO DE CONTROL */}
+          <section className="glass-master neon-border-verde p-10 rounded-[40px] print:p-6 print:rounded-xl">
+            <h3 className="text-[#22c55e] text-[11px] font-black uppercase tracking-[0.5em] italic flex items-center gap-3 mb-8 border-b border-white/5 pb-6 no-print">
+              <ShieldCheck size={18} /> Algoritmo de Control Maestro
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-10 print:flex print:justify-between print:gap-4">
+              {[
+                { label: "M. Error %", k: "error", c: "text-[#06b6d4]" },
+                { label: "Porciones", k: "rendimiento", c: "text-[#06b6d4]" },
+                { label: "FC Target %", k: "target", c: "text-[#d946ef]" },
+                { label: "Impuesto %", k: "tax", c: "text-[#d946ef]" }
+              ].map((p) => (
+                <div key={p.k} className="space-y-4 print:space-y-0 print:text-center">
+                  <label className="label-yellow print:text-[8px] print:block print:mb-1">{p.label}</label>
+                  <input type="number" className={`input-tech w-full p-6 rounded-2xl font-black text-4xl mono ${p.c} print:p-0 print:text-lg`} value={params[p.k]} onChange={(e) => setParams({...params, [p.k]: e.target.value})} />
+                </div>
               ))}
             </div>
-          )}
-        </div>
-      </section>
-    </div>
-  )
-}
+          </section>
 
-export default App
+          <section className="glass-master border border-cyan-400/20 p-10 rounded-[40px] no-print">
+            <h3 className="text-cyan-300 text-[11px] font-black uppercase tracking-[0.4em] italic flex items-center gap-3 mb-8 border-b border-white/5 pb-6">
+              <TrendingUp size={18} /> Rentabilidad de Evento
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-5">
+              {[
+                { k: "nomina", label: "Nomina ($)" },
+                { k: "arriendo", label: "Arriendo ($)" },
+                { k: "servicios", label: "Servicios ($)" },
+                { k: "otros", label: "Otros fijos ($)" },
+                { k: "utilidadObjetivo", label: "Utilidad objetivo ($)" },
+                { k: "cantidadPlatos", label: "Cantidad platos" }
+              ].map((item) => (
+                <div key={item.k} className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">{item.label}</label>
+                  <input
+                    type="number"
+                    className="input-tech w-full p-4 rounded-xl font-black mono text-lg text-white"
+                    value={evento[item.k]}
+                    onChange={(e) => setEvento({ ...evento, [item.k]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {margenContribucion <= 0 ? (
+              <div className="mt-6 rounded-2xl border border-red-500/35 bg-red-500/10 p-4">
+                <p className="text-red-300 text-[11px] font-black uppercase tracking-[0.2em]">Margen unitario no viable</p>
+                <p className="text-sm text-zinc-300 mt-2">
+                  El precio sin impuesto no cubre el costo por plato. Ajusta costo, target o precio antes de proyectar utilidad.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Punto de equilibrio</p>
+                  <p className="text-3xl font-black mono text-cyan-300 mt-2">{puntoEquilibrioPlatos.toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">platos minimos</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Platos para utilidad objetivo</p>
+                  <p className="text-3xl font-black mono text-amber-300 mt-2">{platosParaUtilidadObjetivo.toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">con utilidad definida</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Utilidad proyectada</p>
+                  <p className={`text-3xl font-black mono mt-2 ${utilidadProyectada >= 0 ? "text-[#22c55e]" : "text-red-400"}`}>
+                    ${Math.round(utilidadProyectada).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">segun cantidad de platos</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.16em]">Cotizacion proyectada</p>
+                  <p className="text-3xl font-black mono text-white mt-2">${Math.round(ventaProyectada).toLocaleString()}</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 uppercase">ventas brutas del evento</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-zinc-500">
+              <span className="font-black">Costo variable total:</span> ${Math.round(costoVariableTotal).toLocaleString()} |{" "}
+              <span className="font-black">Costos fijos:</span> ${Math.round(costosFijosTotales).toLocaleString()} |{" "}
+              <span className="font-black">Margen por plato:</span> ${Math.round(margenContribucion).toLocaleString()}
+            </div>
+          </section>
+
+          {/* RESULTADOS FINALES MAESTROS */}
+          <section className="glass-master neon-border-magenta p-12 rounded-[50px] relative overflow-hidden shadow-2xl flex flex-col md:flex-row justify-between items-center gap-10 print:flex-row print:p-8 print:rounded-xl">
+            <div className="relative z-10 w-full md:w-1/3 print:w-auto">
+              <span className="text-zinc-600 text-[11px] font-black uppercase tracking-[0.6em] italic mb-4 block print:mb-1 print:text-[9px]">Costo x Porción</span>
+              <h2 className={`text-6xl font-black italic tracking-tighter mono print:text-2xl print:text-black ${sobrepasoCMP ? 'text-red-500' : 'text-white'}`}>
+                <span className="text-[#d946ef] print:text-black">$</span>{Math.round(costoPorcion).toLocaleString()}
+              </h2>
+              {sobrepasoCMP && <p className="text-red-500 text-[10px] font-black uppercase mt-2 no-print animate-pulse">Exceso sobre CMP detectado</p>}
+            </div>
+
+            <div className="h-px md:h-24 w-full md:w-px bg-white/10 relative z-10 no-print"></div>
+
+            <div className="relative z-10 w-full md:w-1/2 text-right print:w-auto print:text-left">
+              <span className="text-[#d946ef] text-[11px] font-black uppercase tracking-[0.8em] italic mb-6 block print:mb-1 print:text-[9px] print:text-black">Precio Sugerido Final</span>
+              <div className="flex items-baseline justify-end gap-3 print:justify-start">
+                <span className="text-4xl font-bold text-zinc-800 mono no-print">$</span>
+                <h2 className="text-[100px] font-black text-white italic tracking-tighter leading-none mono print:text-4xl print:text-black">
+                  ${precioFinalRedondeado.toLocaleString()}
+                </h2>
+              </div>
+            </div>
+          </section>
+
+          {renderCloudActions("Acciones de guardado en receta", "receta")}
+            </>
+          )}
+
+        </main>
+
+        <footer className="max-w-[1600px] mx-auto mt-20 mb-10 text-center opacity-30 italic tracking-[1em] text-[10px] uppercase no-print">
+          Exponiendo la mediocridad de la consultoría tradicional
+        </footer>
+
+        {/* FOOTER PDF RECONSTRUIDO CON CLARIDAD */}
+        <div className="footer-pdf">
+          <p className="font-black uppercase tracking-widest text-[10px]">NÓMADA CONSULTORÍAS GASTRONÓMICAS</p>
+          <p className="mt-1 opacity-80 text-[8px]">"Mientras ellos adivinan nosotros ejecutamos."</p>
+          <p className="mt-2 text-[7px] uppercase tracking-widest">INGENIERÍA DE MENÚ: {clasificacion.label} — {new Date().toLocaleDateString()}</p>
+          <p className="mt-1 text-[7px] uppercase tracking-widest">FOOD COST REAL: {foodCostReal.toFixed(1)}% | CMP ESTABLECIDO: ${Number(costoMaximo).toLocaleString()}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
