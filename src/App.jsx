@@ -27,8 +27,8 @@ const App = () => {
   ];
   
   // --- ESTADO DE AUTENTICACION ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [authMode, setAuthMode] = useState("login");
@@ -40,30 +40,8 @@ const App = () => {
   const fullPhrase = "Mientras ellos adivinan nosotros ejecutamos.";
 
   useEffect(() => {
-    let isMounted = true;
-
-    const bootstrapAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("No se pudo recuperar la sesion", error);
-      }
-      if (!isMounted) return;
-      setIsAuthenticated(Boolean(data.session));
-      setAuthLoading(false);
-    };
-
-    bootstrapAuth();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return;
-      setIsAuthenticated(Boolean(session));
-      setAuthLoading(false);
-    });
-
-    return () => {
-      isMounted = false;
-      authListener.subscription.unsubscribe();
-    };
+    // Acceso público - sin autenticación Supabase
+    setAuthLoading(false);
   }, []);
 
   useEffect(() => {
@@ -77,88 +55,9 @@ const App = () => {
     return () => clearInterval(timer);
   }, [authLoading, isAuthenticated]);
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    if (isSubmittingAuth) return;
-
-    const email = credentials.email.trim().toLowerCase();
-    const pass = credentials.pass.trim();
-    if (!email || !pass) {
-      setLoginError("Ingresa correo y contrasena.");
-      return;
-    }
-
-    setIsSubmittingAuth(true);
-    setLoginError("");
-    setAuthNotice("");
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass
-    });
-
-    if (error) {
-      setLoginError("Credenciales invalidas o usuario no confirmado.");
-      setCredentials({ email, pass: "" });
-    } else {
-      setIsAuthenticated(true);
-      setCredentials({ email, pass: "" });
-    }
-
-    setIsSubmittingAuth(false);
-  };
-
-  const handleRegister = async () => {
-    if (isSubmittingAuth) return;
-
-    const email = credentials.email.trim().toLowerCase();
-    const pass = credentials.pass.trim();
-    if (!email || !pass) {
-      setLoginError("Ingresa correo y contrasena.");
-      return;
-    }
-    if (pass.length < 6) {
-      setLoginError("La contrasena debe tener al menos 6 caracteres.");
-      return;
-    }
-
-    setIsSubmittingAuth(true);
-    setLoginError("");
-    setAuthNotice("");
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: pass,
-      options: {
-        emailRedirectTo: APP_PUBLIC_URL || undefined
-      }
-    });
-
-    if (error) {
-      setLoginError(error.message || "No se pudo crear el acceso.");
-      setCredentials({ email, pass: "" });
-      setIsSubmittingAuth(false);
-      return;
-    }
-
-    const requiresConfirmation = !data.session;
-    setCredentials({ email, pass: "" });
-    setAuthNotice(
-      requiresConfirmation
-        ? "Acceso creado. Revisa tu correo para confirmar la cuenta antes de ingresar."
-        : "Acceso creado correctamente. Ya puedes ingresar."
-    );
-    setAuthMode("login");
-    setIsSubmittingAuth(false);
-  };
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("No se pudo cerrar sesion", error);
-    }
-    setIsAuthenticated(false);
-  };
+  const handleAuth = () => {}; // Autenticación deshabilitada
+  const handleRegister = () => {}; // Registro deshabilitado
+  const handleLogout = () => {}; // Logout deshabilitado
 
   // --- LOGICA DE NEGOCIO ---
   const [offset, setOffset] = useState(0);
